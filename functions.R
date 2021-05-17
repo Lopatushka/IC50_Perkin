@@ -103,6 +103,27 @@ FindPlateu <- function(df, alpha)
   return(df)
 }
 
+Plot <- function(df)
+{
+  plot(x=df$C_mkM,
+       y=df$D555,
+       xlab='Log10[C], mkM', ylab='D555', main=df[1, 3])
+}
+
+FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
+{
+  medians <- c()
+  i <- 1
+  while (i < n_dilutions*n_replicates + 1)
+  {
+    median <- median(df$D555[i:(i+2)])
+    medians <- c(medians, median)
+    i <- i + 3
+  }
+  medians <- medians[!is.na(medians)]
+  return(medians)
+}
+
 # Function callings
 data1 <- ImportDataFile(path_data1)
 data2 <- ImportDataFile(path_data2)
@@ -111,8 +132,13 @@ data <- AddDrugNames(data, path_names)
 data <- AddConcentrations(data)
 data <- DropNull(data)
 
+sb1 <- Subset(data, "DMSO_1")
+sb2 <- Subset(data, "DMSO_2")
 
-
+sb1 <- FindPlateu(sb1, 0.5)
+sb2 <- FindPlateu(sb2, 0.5)
+Plot(sb1)
+Plot(sb2)
 
 # DRC
 library(drc)
@@ -121,25 +147,31 @@ library(lmtest)
 library(metafor)
 library(sandwich)
 
-drug_names <- unique(data$Drug)
-
-drug <- subset(data, data$Drug == "DMSO_1")
-drug <- drug[, c(6, 9, 8)]
-drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
-plot(x=drug$C_mkM, y=drug$D555, xlab='Log10[C], mkM', ylab='D555', main=drug[1, 3])
-
-lm <- lm(drug$D555 ~ drug$C_mkM)
+#drug_names <- unique(data$Drug)
 #names(summary(lm))
-p_val <- summary(lm)$coefficients[2,4]
 
 
 
-while (p_val < 0.5)
+
+
+FindMedians(sb1)
+
+medians = c()
+i <- 1
+while (i < 25)
 {
-  drug <- drug[-(1:3), ]
-  lm <- lm(drug$D555 ~ drug$C_mkM)
-  p_val <- summary(lm)$coefficients[2,4]
+  print(sb2$D555[i:(i+2)])
+  median <- median(sb2$D555[i:(i+2)])
+  medians <- c(medians, median)
+  i <- i + 3
 }
+
+medians <- medians[!is.na(medians)]
+
+library(outliers)
+medians
+outlier(x=medians)
+
 
 
 #model <- drm(D555 ~ C_mkM,

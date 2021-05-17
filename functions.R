@@ -1,8 +1,8 @@
 # Paths
-path_data1 <- "C:/Users/User/Documents/Work/data/MTT/SKV/200519/mcf7 lena.xls"
-path_data2 <- "C:/Users/User/Documents/Work/data/MTT/SKV/200519/mcf7 lena+skv.xls"
-path_names <- "C:/Users/User/Documents/Work/data/MTT/SKV/200519/names.xlsx"
-path_conc <- "C:/Users/User/Documents/Work/data/MTT/SKV/200519/concentrations.xlsx"
+path_data1 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/mcf7 lena.xls"
+path_data2 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/mcf7 lena+skv.xls"
+path_names <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/names.xlsx"
+path_conc <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/concentrations.xlsx"
 
 ImportDataFile <- function(path_data)
 {
@@ -82,6 +82,27 @@ DropNull <- function(df)
   return(as.data.frame(subset(df, df$Drug!='null')))
 }
 
+Subset <- function(df, name)
+{
+  drug <- subset(df, df$Drug == name)
+  drug <- drug[, c(6, 9, 8)]
+  drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
+  return(drug)
+}
+
+FindPlateu <- function(df, alpha)
+{
+  lm <- lm(df$D555 ~ df$C_mkM)
+  p_val <- summary(lm)$coefficients[2,4]
+  while (p_val < alpha)
+  {
+    df <- df[-(1:3), ]
+    lm <- lm(df$D555 ~ df$C_mkM)
+    p_val <- summary(lm)$coefficients[2,4]
+  }
+  return(df)
+}
+
 # Function callings
 data1 <- ImportDataFile(path_data1)
 data2 <- ImportDataFile(path_data2)
@@ -89,6 +110,8 @@ data <- CombineTwoDataFiles(data1, data2)
 data <- AddDrugNames(data, path_names)
 data <- AddConcentrations(data)
 data <- DropNull(data)
+
+
 
 
 # DRC
@@ -100,12 +123,25 @@ library(sandwich)
 
 drug_names <- unique(data$Drug)
 
-drug <- subset(data, data$Drug == "DMSO")
-drug <- drug[, c(6, 9)]
+drug <- subset(data, data$Drug == "DMSO_1")
+drug <- drug[, c(6, 9, 8)]
 drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
-plot(x=drug$C_mkM, y=drug$D555, xlab='Log10[C], mkM', ylab='D555')
+plot(x=drug$C_mkM, y=drug$D555, xlab='Log10[C], mkM', ylab='D555', main=drug[1, 3])
+
+lm <- lm(drug$D555 ~ drug$C_mkM)
+#names(summary(lm))
+p_val <- summary(lm)$coefficients[2,4]
 
 
-model <- drm(D555 ~ C_mkM,
-             data = drug,
-             fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
+
+while (p_val < 0.5)
+{
+  drug <- drug[-(1:3), ]
+  lm <- lm(drug$D555 ~ drug$C_mkM)
+  p_val <- summary(lm)$coefficients[2,4]
+}
+
+
+#model <- drm(D555 ~ C_mkM,
+ #            data = drug,
+ #            fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))

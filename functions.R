@@ -40,8 +40,7 @@ AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
 }
 
 AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
-                              n_dilutions=8,  n_replicates=3,
-                              control_name = 'DMSO')
+                              n_dilutions=8,  n_replicates=3)
 {
   concentrations <- read_excel(path_conc)
   temp <- data.frame(matrix(NA, ncol=ncol(concentrations), nrow=n_dilutions))
@@ -59,22 +58,22 @@ AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
   #log10 transformation
   concentrations[2:nrow(concentrations), ] <- log10(concentrations[2:nrow(concentrations),])
   
-  # Add null  and 0 to Drug null and control
+  # Add null to Drug null
   df$C_mkM <- NA
   df$C_mkM[df$Drug == 'null'] <- 'null'
-  df$C_mkM[df$Drug == control_name] <- 0
   
   for (i in 1:length(unique(df$Drug)))
   {
     drug <- unique(df$Drug)[i]
-    if (drug!='null' & drug!= control_name)
+    if (drug!='null')
     {
       conc <- concentrations[colnames(concentrations) == drug][[1]][-1]
       df$C_mkM[df$Drug==drug] <- rep(conc, n_replicates)
     }
   }
   
-  df$C_mkM <- sapply(df$C_mkM, as.double)
+  
+  df$C_mkM <- sapply(df$C_mkM[df$Drug == 'null'], as.double)
   return(df)
 }
 
@@ -103,7 +102,6 @@ drug_names <- unique(data$Drug)
 
 drug <- subset(data, data$Drug == "GK149p")
 drug <- drug[, c(6, 9)]
-drug[, 2] <- sapply(drug[, 2], as.double)
 drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
 plot(x=drug$C_mkM, y=drug$D555, xlab='Log10[C], mkM', ylab='D555')
 

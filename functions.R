@@ -1,3 +1,7 @@
+library(drc)
+library(outliers)
+library(compare)
+
 # Paths
 path_data1 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/mcf7 lena.xls"
 path_data2 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/mcf7 lena+skv.xls"
@@ -92,15 +96,20 @@ Subset <- function(df, name)
 
 FindPlateu <- function(df, alpha)
 {
+  notPlateu <- data.frame(matrix(ncol = ncol(df), nrow = 0))
+  colnames(notPlateu) <- colnames(df)
+  
   lm <- lm(df$D555 ~ df$C_mkM)
   p_val <- summary(lm)$coefficients[2,4]
+  
   while (p_val < alpha)
   {
+    notPlateu <- rbind(notPlateu, df[(1:3), ])
     df <- df[-(1:3), ]
     lm <- lm(df$D555 ~ df$C_mkM)
     p_val <- summary(lm)$coefficients[2,4]
   }
-  return(df)
+  return(list(df, notPlateu))
 }
 
 Plot <- function(df)
@@ -135,44 +144,38 @@ data <- DropNull(data)
 sb1 <- Subset(data, "DMSO_1")
 sb2 <- Subset(data, "DMSO_2")
 
-sb1 <- FindPlateu(sb1, 0.5)
-sb2 <- FindPlateu(sb2, 0.5)
+#sb1 <- FindPlateu(sb1, 0.5)
+FindPlateu(sb2, 0.5)
+
 Plot(sb1)
 Plot(sb2)
+Plot(plateu2)
+sb2[plateu2]
 
-# DRC
-library(drc)
-library(boot)
-library(lmtest)
-library(metafor)
-library(sandwich)
+medians <- FindMedians(sb1)
+medians2 <- FindMedians(sb2)
+outlier(medians2)
+
+
+medians <- rm.outlier(x=medians, fill = TRUE, median = TRUE)
+
+RemoveOutliers <- function(df, alpha=0.5)
+{
+  plateau <- FindPlateu(df=df, alpha=alpha)
+  
+}
+
 
 #drug_names <- unique(data$Drug)
 #names(summary(lm))
 
 
+sb2
+plateu2
 
+setdiff(sb2, plateu2)
 
-
-FindMedians(sb1)
-
-medians = c()
-i <- 1
-while (i < 25)
-{
-  print(sb2$D555[i:(i+2)])
-  median <- median(sb2$D555[i:(i+2)])
-  medians <- c(medians, median)
-  i <- i + 3
-}
-
-medians <- medians[!is.na(medians)]
-
-library(outliers)
-medians
-outlier(x=medians)
-
-
+compare(sb2,plateu2)
 
 #model <- drm(D555 ~ C_mkM,
  #            data = drug,

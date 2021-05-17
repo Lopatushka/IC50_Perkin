@@ -94,7 +94,7 @@ Subset <- function(df, name)
   return(drug)
 }
 
-FindPlateu <- function(df, alpha)
+FindPlateu <- function(df, alpha=0.05)
 {
   notPlateu <- data.frame(matrix(ncol = ncol(df), nrow = 0))
   colnames(notPlateu) <- colnames(df)
@@ -109,6 +109,7 @@ FindPlateu <- function(df, alpha)
     lm <- lm(df$D555 ~ df$C_mkM)
     p_val <- summary(lm)$coefficients[2,4]
   }
+  
   return(list(df, notPlateu))
 }
 
@@ -133,6 +134,30 @@ FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
   return(medians)
 }
 
+RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3)
+{
+  pl <- FindPlateu(df, alpha=alpha)[[1]]
+  non_pl <- FindPlateu(df, alpha=alpha)[[2]]
+  
+  pl_medians <- FindMedians(pl, n_dilutions=n_dilutions,  n_replicates=n_replicates)
+  pl_medians <- rm.outlier(x=pl_medians, fill=TRUE, median=TRUE)
+  
+  non_pl_medians <- FindMedians(non_pl, n_dilutions=n_dilutions,  n_replicates=n_replicates)
+  if(length(non_pl_medians)==0){
+    non_pl_medians_rm <- NULL
+  }
+  if(length(non_pl_medians)==1){
+    non_pl_medians_rm <- non_pl_medians
+  }
+  if(length(non_pl_medians)>1){
+    non_pl_medians_rm <- rm.outlier(x=non_pl_medians, fill=TRUE, median=TRUE)
+  }
+  
+  return(c(non_pl_medians_rm, pl_medians))
+  
+  
+}
+
 # Function callings
 data1 <- ImportDataFile(path_data1)
 data2 <- ImportDataFile(path_data2)
@@ -144,38 +169,15 @@ data <- DropNull(data)
 sb1 <- Subset(data, "DMSO_1")
 sb2 <- Subset(data, "DMSO_2")
 
-#sb1 <- FindPlateu(sb1, 0.5)
-FindPlateu(sb2, 0.5)
-
 Plot(sb1)
 Plot(sb2)
-Plot(plateu2)
-sb2[plateu2]
 
-medians <- FindMedians(sb1)
-medians2 <- FindMedians(sb2)
-outlier(medians2)
+RmOutliersFromControl(sb1)
 
-
-medians <- rm.outlier(x=medians, fill = TRUE, median = TRUE)
-
-RemoveOutliers <- function(df, alpha=0.5)
-{
-  plateau <- FindPlateu(df=df, alpha=alpha)
-  
-}
-
+RmOutliersFromControl(sb2)
 
 #drug_names <- unique(data$Drug)
 #names(summary(lm))
-
-
-sb2
-plateu2
-
-setdiff(sb2, plateu2)
-
-compare(sb2,plateu2)
 
 #model <- drm(D555 ~ C_mkM,
  #            data = drug,

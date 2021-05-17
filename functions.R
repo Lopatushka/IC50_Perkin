@@ -9,6 +9,7 @@ ImportDataFile <- function(path_data)
   library(readxl)
   df <- read_excel(path_data)
   colnames(df)[6] <- "D555"
+  df$D555 <- sapply(df$D555, as.double)
   return(df)
 }
 
@@ -97,8 +98,14 @@ library(metafor)
 library(sandwich)
 
 drug_names <- unique(data$Drug)
-control <- subset(data, data$Drug == 'DMSO')
 
-drug <- subset(data, data$Drug == "Cis")
-model <- drm(D555 ~ C_mkM, data=control[,c(6, 9)],
+drug <- subset(data, data$Drug == "GK149p")
+drug <- drug[, c(6, 9)]
+drug[, 2] <- sapply(drug[, 2], as.double)
+drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
+plot(x=drug$C_mkM, y=drug$D555, xlab='Log10[C], mkM', ylab='D555')
+
+
+model <- drm(D555 ~ C_mkM,
+             data = drug,
              fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))

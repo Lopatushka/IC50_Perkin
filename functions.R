@@ -73,7 +73,7 @@ AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
   }
   
   
-  df$C_mkM <- sapply(df$C_mkM[df$Drug == 'null'], as.double)
+  df$C_mkM <- sapply(df$C_mkM, as.double)
   return(df)
 }
 
@@ -100,7 +100,7 @@ library(sandwich)
 
 drug_names <- unique(data$Drug)
 
-drug <- subset(data, data$Drug == "GK149p")
+drug <- subset(data, data$Drug == "DMSO")
 drug <- drug[, c(6, 9)]
 drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
 plot(x=drug$C_mkM, y=drug$D555, xlab='Log10[C], mkM', ylab='D555')

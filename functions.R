@@ -73,6 +73,8 @@ AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
       df$C_mkM[df$Drug==drug] <- rep(conc, n_replicates)
     }
   }
+  
+  df$C_mkM <- sapply(df$C_mkM, as.double)
   return(df)
 }
 

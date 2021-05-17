@@ -1,2 +1,4 @@
 # IC50_Perkin
-This code is to process cytotoxicity assays by drc package.
+Author: Lopatukhina Elena
+
+Description: This code is to process cytotoxicity assays by drc package.

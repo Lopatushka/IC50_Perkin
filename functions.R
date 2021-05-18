@@ -168,13 +168,29 @@ Normalization <- function(df, controls, n_replicates=3)
   return(df)
 }
 
-DRC <- function(df, normilized=TRUE)
+CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
+{
+  dose <- start_dose
+  result <- predict(model, data.frame(dose), se.fit=TRUE)
+  while(result[[1]]<X)
+  {
+    dose <- dose-step_dose
+    result <- predict(model, data.frame(dose), se.fit=TRUE)
+  }
+  return(dose)
+}
+
+DRC <- function(df, normilized=TRUE,
+                start_dose=100, step_dose=0.02, X=50)
 {
   results <- data.frame(matrix(NA, ncol=20, nrow=1))
-  colnames(results) <- c('Drug', 'F val', 'p-val', 'Slope', 'Slope SE', 'Slope t-val', 'Slope p-val',
-                         'LL', 'LL SE', 'LL t-val', 'LL p-val',
-                         'UL', 'UL SE', 'UL t-val', 'UL p-val',
-                         'ED50', 'ED50 SE', 'ED50 t-val', 'ED50 p-val', 'CC50')
+  colnames(results) <- c('Drug', 'F val', 'p-val',
+                         'Slope', 'LL','UL', 'ED50',
+                         'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                         'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                         'Slope p-val', 'LL p-val','UL p-val','ED50 p-val',
+                         'CC50')
+  
   
   results$Drug <- df[1, 3]
   
@@ -194,33 +210,23 @@ DRC <- function(df, normilized=TRUE)
   model_fit <- data.frame(modelFit(model))
   coeffs <- summary(model)$coefficients
   
-  results$`F val` <- model_fit$"F.value"[2]
-  results$`p-val` <- model_fit$"p.value"[2]
-   
+  results$`F val` <- round(model_fit$"F.value"[2], digits=3)
+  results$`p-val` <- round(model_fit$"p.value"[2], digits=3)
+  
+  i <- 4
   for(coef in coeffs)
   {
-    for(i in 4:19)
-    {
-      results[1, i] <- coef
-    }
-    
+    results[1, i] <- round(coef, digits=3)
+    i <- i + 1
   }
   
-  
+  results$CC50 <- CCX(model=model, start_dose=start_dose,
+                      step_dose=step_dose, X=X)
+  return(results)
 }
   
   
-CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
-{
-  dose <- start_dose
-  result <- predict(model, data.frame(dose), se.fit=TRUE)
-  while(result[[1]]<X)
-  {
-    dose <- dose-step_dose
-    result <- predict(model, data.frame(dose), se.fit=TRUE)
-  }
-  return(dose)
-}
+
 
 # Function callings
 data1 <- ImportDataFile(path_data1)
@@ -244,12 +250,7 @@ control_medians <- RmOutliersFromControl(sb1)
 
 drug <- Normalization(drug, control_medians)
 
-# DRC + plot model
 
-
-summary(model)
-names(summary(model))
-summary(model)$coefficients[5]
 
 
 plot(model, broken=TRUE, bty="l",
@@ -257,14 +258,8 @@ plot(model, broken=TRUE, bty="l",
      main=drug[1, 3], type="all")
 
 
-CC50 <- CCX(model, start_dose=100, step_dose=0.02, X = 50)
 
 
-
-for(i in results[1, 2])
-{
-  print(results[i])
-}
 
 
 

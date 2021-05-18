@@ -168,6 +168,59 @@ Normalization <- function(df, controls, n_replicates=3)
   return(df)
 }
 
+DRC <- function(df, normilized=TRUE)
+{
+  results <- data.frame(matrix(NA, ncol=20, nrow=1))
+  colnames(results) <- c('Drug', 'F val', 'p-val', 'Slope', 'Slope SE', 'Slope t-val', 'Slope p-val',
+                         'LL', 'LL SE', 'LL t-val', 'LL p-val',
+                         'UL', 'UL SE', 'UL t-val', 'UL p-val',
+                         'ED50', 'ED50 SE', 'ED50 t-val', 'ED50 p-val', 'CC50')
+  
+  results$Drug <- df[1, 3]
+  
+  if(normilized==TRUE)
+  {
+    df=df[, c(2,4)]
+  }
+  if(normilized==FALSE)
+  {
+    df=df[, c(2,1)]
+  }
+  
+  model <- drm(D555_N ~ C_mkM,
+               data = df,
+               fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
+  
+  model_fit <- data.frame(modelFit(model))
+  coeffs <- summary(model)$coefficients
+  
+  results$`F val` <- model_fit$"F.value"[2]
+  results$`p-val` <- model_fit$"p.value"[2]
+   
+  for(coef in coeffs)
+  {
+    for(i in 4:19)
+    {
+      results[1, i] <- coef
+    }
+    
+  }
+  
+  
+}
+  
+  
+CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
+{
+  dose <- start_dose
+  result <- predict(model, data.frame(dose), se.fit=TRUE)
+  while(result[[1]]<X)
+  {
+    dose <- dose-step_dose
+    result <- predict(model, data.frame(dose), se.fit=TRUE)
+  }
+  return(dose)
+}
 
 # Function callings
 data1 <- ImportDataFile(path_data1)
@@ -180,6 +233,7 @@ data <- DropNull(data)
 sb1 <- Subset(data, "DMSO_1")
 sb2 <- Subset(data, "DMSO_2")
 
+drug_names <- unique(data$Drug)
 drug <- Subset(data, "GK149p")
 
 Plot(sb1)
@@ -188,17 +242,38 @@ Plot(drug)
 
 control_medians <- RmOutliersFromControl(sb1)
 
+drug <- Normalization(drug, control_medians)
 
-drug_names <- unique(data$Drug)
-#names(summary(lm))
-drug$D555_N <- 100*drug$D555/rep(control_medians, each=3)
+# DRC + plot model
 
-
-model <- drm(D555_N ~ C_mkM,
-             data = drug[, c(2,4)],
-             fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
 
 summary(model)
-plot(model)
+names(summary(model))
+summary(model)$coefficients[5]
 
-median(drug$D555_N)
+
+plot(model, broken=TRUE, bty="l",
+     xlab="Log(drug concentration)", ylab="Normilized response",
+     main=drug[1, 3], type="all")
+
+
+CC50 <- CCX(model, start_dose=100, step_dose=0.02, X = 50)
+
+
+
+for(i in results[1, 2])
+{
+  print(results[i])
+}
+
+
+
+#nls_function <- function(x, b, c, d, e)
+#{
+  degree <- log((d-x)/(x-c)) * (1/b)
+  result <- e*(10^degree)
+  
+  return(result)
+}
+
+

@@ -181,7 +181,7 @@ CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
 }
 
 DRC <- function(df, normilized=TRUE,
-                start_dose=100, step_dose=0.02, X=50)
+                start_dose=100, step_dose=0.02, X=50, plot=TRUE)
 {
   results <- data.frame(matrix(NA, ncol=20, nrow=1))
   colnames(results) <- c('Drug', 'F val', 'p-val',
@@ -192,7 +192,7 @@ DRC <- function(df, normilized=TRUE,
                          'CC50')
   
   
-  results$Drug <- df[1, 3]
+  drug_name <- df[1, 3]
   
   if(normilized==TRUE)
   {
@@ -203,13 +203,16 @@ DRC <- function(df, normilized=TRUE,
     df=df[, c(2,1)]
   }
   
-  model <- drm(D555_N ~ C_mkM,
+  colnames(df) <- c("C_mkM", "D555")
+  
+  model <- drm(D555 ~ C_mkM,
                data = df,
                fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
   
   model_fit <- data.frame(modelFit(model))
   coeffs <- summary(model)$coefficients
   
+  results$Drug <- drug_name
   results$`F val` <- round(model_fit$"F.value"[2], digits=3)
   results$`p-val` <- round(model_fit$"p.value"[2], digits=3)
   
@@ -222,6 +225,13 @@ DRC <- function(df, normilized=TRUE,
   
   results$CC50 <- CCX(model=model, start_dose=start_dose,
                       step_dose=step_dose, X=X)
+  
+  if(plot==TRUE)
+  {
+    plot(model, broken=TRUE, bty="l",
+         xlab="Log(drug concentration)", ylab="Response",
+         main=drug_name, type="all")
+  }
   return(results)
 }
   
@@ -237,9 +247,9 @@ data <- AddConcentrations(data)
 data <- DropNull(data)
 
 sb1 <- Subset(data, "DMSO_1")
-sb2 <- Subset(data, "DMSO_2")
+#sb2 <- Subset(data, "DMSO_2")
 
-drug_names <- unique(data$Drug)
+#drug_names <- unique(data$Drug)
 drug <- Subset(data, "GK149p")
 
 Plot(sb1)
@@ -253,9 +263,7 @@ drug <- Normalization(drug, control_medians)
 
 
 
-plot(model, broken=TRUE, bty="l",
-     xlab="Log(drug concentration)", ylab="Normilized response",
-     main=drug[1, 3], type="all")
+
 
 
 

@@ -60,7 +60,7 @@ AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
   }
   
   #log10 transformation
-  concentrations[2:nrow(concentrations), ] <- log10(concentrations[2:nrow(concentrations),])
+  #concentrations[2:nrow(concentrations), ] <- log10(concentrations[2:nrow(concentrations),])
   
   # Add null to Drug null
   df$C_mkM <- NA
@@ -94,7 +94,7 @@ Subset <- function(df, name)
   return(drug)
 }
 
-FindPlateu <- function(df, alpha=0.05)
+FindPlateuForControl <- function(df, alpha=0.05)
 {
   notPlateu <- data.frame(matrix(ncol = ncol(df), nrow = 0))
   colnames(notPlateu) <- colnames(df)
@@ -113,10 +113,14 @@ FindPlateu <- function(df, alpha=0.05)
   return(list(df, notPlateu))
 }
 
-Plot <- function(df)
+Plot <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
 {
-  plot(x=df$C_mkM,
-       y=df$D555,
+  if(log==TRUE)
+  {
+    x=log10(x)
+  }
+  plot(x=x,
+       y=y,
        xlab='Log10[C], mkM', ylab='D555', main=df[1, 3])
 }
 
@@ -136,8 +140,8 @@ FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
 
 RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3)
 {
-  pl <- FindPlateu(df, alpha=alpha)[[1]]
-  non_pl <- FindPlateu(df, alpha=alpha)[[2]]
+  pl <- FindPlateuForControl(df, alpha=alpha)[[1]]
+  non_pl <- FindPlateuForControl(df, alpha=alpha)[[2]]
   
   pl_medians <- FindMedians(pl, n_dilutions=n_dilutions,  n_replicates=n_replicates)
   pl_medians <- rm.outlier(x=pl_medians, fill=TRUE, median=TRUE)
@@ -158,6 +162,13 @@ RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3
   
 }
 
+Normalization <- function(df, controls, n_replicates=3)
+{
+  df$D555_N <- 100*df$D555/rep(controls, each=n_replicates)
+  return(df)
+}
+
+
 # Function callings
 data1 <- ImportDataFile(path_data1)
 data2 <- ImportDataFile(path_data2)
@@ -169,16 +180,25 @@ data <- DropNull(data)
 sb1 <- Subset(data, "DMSO_1")
 sb2 <- Subset(data, "DMSO_2")
 
+drug <- Subset(data, "GK149p")
+
 Plot(sb1)
 Plot(sb2)
+Plot(drug)
 
-RmOutliersFromControl(sb1)
+control_medians <- RmOutliersFromControl(sb1)
 
-RmOutliersFromControl(sb2)
 
-#drug_names <- unique(data$Drug)
+drug_names <- unique(data$Drug)
 #names(summary(lm))
+drug$D555_N <- 100*drug$D555/rep(control_medians, each=3)
 
-#model <- drm(D555 ~ C_mkM,
- #            data = drug,
- #            fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
+
+model <- drm(D555_N ~ C_mkM,
+             data = drug[, c(2,4)],
+             fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
+
+summary(model)
+plot(model)
+
+median(drug$D555_N)

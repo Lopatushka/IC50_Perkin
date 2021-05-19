@@ -5,6 +5,7 @@ path_data1 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/HEK293 lena.xls"
 path_data2 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/HEK293 lena+skv.xls"
 path_names <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/names.xlsx"
 path_conc <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/concentrations.xlsx"
+path_export <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/plots_new/HEK293/HEK293_results.xlsx"
 
 # Download and process row data
 data1 <- ImportDataFile(path_data1)
@@ -52,6 +53,4 @@ colnames(GKs) <- c('Drug', 'F val', 'p-val',
 GKs <- rbind(GKs, statistics)
 
 # Export summary data frame
-write_xlsx(GKs,"C:/Users/acer/Desktop/Work/Data/MTT/SKV/plots_new/HEK293/HEK293_results.xlsx")
-
-drug_names
+write_xlsx(GKs, path_export)

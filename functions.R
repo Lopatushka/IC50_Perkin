@@ -1,13 +1,9 @@
+# Import packages
 library(drc)
 library(outliers)
-library(compare)
+library(writexl)
 
-# Paths
-path_data1 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/mcf7 lena.xls"
-path_data2 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/mcf7 lena+skv.xls"
-path_names <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/names.xlsx"
-path_conc <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/concentrations.xlsx"
-
+# Import .xls file with D555 data
 ImportDataFile <- function(path_data)
 {
   library(readxl)
@@ -17,6 +13,7 @@ ImportDataFile <- function(path_data)
   return(df)
 }
 
+# Combine 2 dataframe with row data into single one
 CombineTwoDataFiles <- function(df1, df2)
 {
   for (i in 1:nrow(df2))
@@ -27,6 +24,7 @@ CombineTwoDataFiles <- function(df1, df2)
   return(df)
 }
 
+# Add Drug name col to dataframe
 AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
 {
   names <- read_excel(path_names)
@@ -43,6 +41,7 @@ AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
   return(df)
 }
 
+# Add Concentration col to dataframe
 AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
                               n_dilutions=8,  n_replicates=3)
 {
@@ -81,11 +80,13 @@ AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
   return(df)
 }
 
+# Drop rows with null drug name
 DropNull <- function(df)
 {
   return(as.data.frame(subset(df, df$Drug!='null')))
 }
 
+# Subset rows with particular drug name
 Subset <- function(df, name)
 {
   drug <- subset(df, df$Drug == name)
@@ -94,6 +95,7 @@ Subset <- function(df, name)
   return(drug)
 }
 
+# Find plateau in control (DMSO) subset using linear regression
 FindPlateuForControl <- function(df, alpha=0.05)
 {
   notPlateu <- data.frame(matrix(ncol = ncol(df), nrow = 0))
@@ -113,6 +115,7 @@ FindPlateuForControl <- function(df, alpha=0.05)
   return(list(df, notPlateu))
 }
 
+# Plot subset
 Plot <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
 {
   if(log==TRUE)
@@ -124,6 +127,7 @@ Plot <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
        xlab='Log10[C], mkM', ylab='D555', main=df[1, 3])
 }
 
+# Find medians of D555 data. Return vector
 FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
 {
   medians <- c()
@@ -138,6 +142,8 @@ FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
   return(medians)
 }
 
+# Remove outliers in control medians and replce them with median values
+# Return vector
 RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3)
 {
   pl <- FindPlateuForControl(df, alpha=alpha)[[1]]
@@ -162,12 +168,15 @@ RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3
   
 }
 
+# Create a new col D555_N in data subset by normalizing D555 by control vector
+# Return subset
 Normalization <- function(df, controls, n_replicates=3)
 {
   df$D555_N <- 100*df$D555/rep(controls, each=n_replicates)
   return(df)
 }
 
+# Find CC50 (or others) using predict fun. Return CC50 concentration
 CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
 {
   dose <- start_dose
@@ -235,8 +244,6 @@ DRC <- function(df, normilized=TRUE,
   return(results)
 }
   
-  
-
 
 # Function callings
 data1 <- ImportDataFile(path_data1)
@@ -247,36 +254,26 @@ data <- AddConcentrations(data)
 data <- DropNull(data)
 
 sb1 <- Subset(data, "DMSO_1")
-#sb2 <- Subset(data, "DMSO_2")
-
-#drug_names <- unique(data$Drug)
-drug <- Subset(data, "GK149p")
-
+sb2 <- Subset(data, "DMSO_2")
 Plot(sb1)
 Plot(sb2)
+control_medians_1 <- RmOutliersFromControl(sb1)
+#control_medians_2 <- RmOutliersFromControl(sb2)
+
+drug <- Subset(data, "GK140p")
 Plot(drug)
+drug <- Normalization(drug, control_medians_1)
+Plot(drug, y=drug$D555_N)
+#drug[-c(11:19), ]
+statistics <- DRC(df=drug, normilized=TRUE,
+                  start_dose=100, step_dose=0.02,
+                  X=50, plot=TRUE)
 
-control_medians <- RmOutliersFromControl(sb1)
+GKs <- rbind(GKs, statistics)
 
-drug <- Normalization(drug, control_medians)
+write_xlsx(GKs,"C:/Users/acer/Desktop/Work/Data/MTT/SKV/plots_new/HEK293/HEK293_results.xlsx")
 
-
-
-
-
-
-
-
-
-
-
-
-#nls_function <- function(x, b, c, d, e)
-#{
-  degree <- log((d-x)/(x-c)) * (1/b)
-  result <- e*(10^degree)
-  
-  return(result)
-}
+drug_names
+drug_names <- unique(data$Drug)
 
 

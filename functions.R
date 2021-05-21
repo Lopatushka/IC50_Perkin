@@ -168,6 +168,11 @@ RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3
   
 }
 
+RmOutliers <- function(df, var="D555")
+{
+  return(df[!outlier(df[[var]], logical = TRUE), ])
+}
+
 # Create a new col D555_N in data subset by normalizing D555 by control vector
 # Return subset
 Normalization <- function(df, controls, n_replicates=3)

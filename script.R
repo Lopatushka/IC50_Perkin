@@ -1,11 +1,11 @@
 source("functions.R")
 
 # Paths to files
-path_data1 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/HEK293 lena.xls"
-path_data2 <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/HEK293 lena+skv.xls"
-path_names <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/names.xlsx"
-path_conc <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/200519/concentrations.xlsx"
-path_export <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/plots_new/HEK293/HEK293_results.xlsx"
+path_data1 <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/HEK293 lena.xls"
+path_data2 <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/HEK293 lena+skv.xls"
+path_names <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/names.xlsx"
+path_conc <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/concentrations.xlsx"
+#path_export <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/plots_new/HEK293/HEK293_results.xlsx"
 
 # Download and process row data
 data1 <- ImportDataFile(path_data1)
@@ -19,7 +19,7 @@ data <- DropNull(data)
 drug_names <- unique(data$Drug)
 
 # Subset and plot control (DMSO)
-sb1 <- Subset(data, "DMSO_1")
+sb1 <- Subset(data, "DMSO")
 sb2 <- Subset(data, "DMSO_2")
 Plot(sb1)
 Plot(sb2)
@@ -29,11 +29,13 @@ control_medians_1 <- RmOutliersFromControl(sb1)
 #control_medians_2 <- RmOutliersFromControl(sb2)
 
 # Subset particular drug, normilize data and plot results
-drug <- Subset(data, "GK140p")
+drug <- Subset(data, "GK142p")
 Plot(drug)
 drug <- Normalization(drug, control_medians_1)
+drug <- RmOutliers(drug)
 Plot(drug, y=drug$D555_N)
 #drug[-c(11:19), ]
+
 
 # Fit the model and plot it
 statistics <- DRC(df=drug, normilized=TRUE,
@@ -54,3 +56,5 @@ GKs <- rbind(GKs, statistics)
 
 # Export summary data frame
 write_xlsx(GKs, path_export)
+
+write_xlsx(statistics, "C:/Users/User/Documents/Work/Data/MTT/SKV/GK136-916.xlsx")

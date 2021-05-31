@@ -31,9 +31,6 @@ curves <- DRC_bunch(df=data, drug_names=drug_names,
                     step_dose=0.02, X=50, plot=TRUE, save_plot=TRUE,
                     path_export=path_export, export=TRUE, CCX=TRUE)
 
-# Fit CC50: bunch procassing
-#PC3_from <- c(13, 1, 6, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 9, 6, 2, 1, 5, 2, 13, 2, 2, 1, 4, 1, 1, 1, 3, 1)
-#PC3_to <- c(18, 24, 14, 24, 5, 9, 6, 6, 6, 24, 24, 6, 8, 24, 4, 24, 11, 12, 11, 7, 7, 12, 10, 18, 10, 10, 5, 9, 24, 24, 9, 7, 7)
 
 boundaries <- list(name = drug_names,
                    from=c(13, 1, 6, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 9, 6, 2, 1, 5, 2, 13, 2, 2, 1, 4, 1, 1, 1, 3, 1),
@@ -41,14 +38,17 @@ boundaries <- list(name = drug_names,
                    response=rep(50, length(drug_names)))
 
 CC50s <- CC50_slope_bunch(df=data, controls=control_medians_1,
-                          boundaries=boundaries)
+                          boundaries=boundaries, exclude=c("PAV35"))
 
 
 
 # Construct final table and export it
-final_table <- cbind(curves, CC50s)
+final_table <- merge(curves, CC50s, by="Drug", all = T)
+
 write_xlsx(curves,
            paste(path_export, "/", "PC3_final_table.xlsx", sep=""))
+
+
 
 slope <- CC50_slope(df=data, name = "EC52",
                     controls = control_medians_1,

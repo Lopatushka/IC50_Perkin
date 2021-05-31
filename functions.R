@@ -380,15 +380,18 @@ CC50_slope_bunch <- function(df, controls,
   results <- data.frame(matrix(NA, ncol=5, nrow=0))
   colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
   
-  for (i in 1:length(drug_names))
+  n_drugs <- length(boundaries$name) - length(exclude)
+  for (i in 1:n_drugs)
   {
+    #print(c(i, boundaries$name[i], boundaries$from[i], boundaries$to[i]))
     if(!is.element(boundaries$name[i], exclude))
     {
       temp <- CC50_slope(df=df, name=boundaries$name[i],
                          controls=controls,
                          from=boundaries$from[i], to=boundaries$to[i],
                          response=boundaries$response[i])
-      results <- rbind(results, temp)    }
+      results <- rbind(results, temp)
+      }
     
   }
   return(results)

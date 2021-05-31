@@ -373,18 +373,18 @@ CC50_slope <- function(df, name, controls, normalized=TRUE,
 
 # Fit linear model and find CC50, SE, CIs for several drugs
 # drug_names, from, to are vectors
-CC50_slope_bunch <- function(df, drug_names, controls,
-                             from, to, response, normalized=TRUE)
+CC50_slope_bunch <- function(df, controls,
+                             boundaries, normalized=TRUE)
 {
   results <- data.frame(matrix(NA, ncol=5, nrow=0))
   colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
   
   for (i in 1:length(drug_names))
   {
-    print(i)
-    temp <- CC50_slope(df=df, name=drug_names[i],
+    temp <- CC50_slope(df=df, name=boundaries$name[i],
                        controls=controls,
-                       from=from[i], to=to[i], response=response)
+                       from=boundaries$from[i], to=boundaries$to[i],
+                       response=boundaries$response[i])
     results <- rbind(results, temp)
   }
   return(results)

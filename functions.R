@@ -1,4 +1,5 @@
 # Import packages
+library(readxl)
 library(drc)
 library(outliers)
 library(writexl)
@@ -6,7 +7,6 @@ library(writexl)
 # Import .xls file with D555 data
 ImportDataFile <- function(path_data)
 {
-  library(readxl)
   df <- read_excel(path_data)
   colnames(df)[6] <- "D555"
   df$D555 <- sapply(df$D555, as.double)
@@ -181,7 +181,7 @@ Normalization <- function(df, controls, n_replicates=3)
   return(df)
 }
 
-# Find CC50 (or others) using predict fun. Return CC50 concentration
+# Find CC50 (or others) using predict fun. Return CC50 concentration without SE
 CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
 {
   dose <- start_dose
@@ -194,17 +194,30 @@ CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
   return(dose)
 }
 
+# Fit curve for one drug
 DRC <- function(df, normilized=TRUE,
-                start_dose=100, step_dose=0.02, X=50, plot=TRUE)
+                start_dose=100, step_dose=0.02, X=50,
+                plot=TRUE, save_plot=TRUE, path_export=".", CCX=TRUE)
 {
-  results <- data.frame(matrix(NA, ncol=20, nrow=1))
-  colnames(results) <- c('Drug', 'F val', 'p-val',
-                         'Slope', 'LL','UL', 'ED50',
-                         'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
-                         'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
-                         'Slope p-val', 'LL p-val','UL p-val','ED50 p-val',
-                         'CC50')
+  if(CCX==TRUE)
+  {
+    results <- data.frame(matrix(NA, ncol=20, nrow=1))
+    colnames(results) <- c('Drug', 'F val', 'p-val',
+                           'Slope', 'LL','UL', 'ED50',
+                           'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                           'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                           'Slope p-val', 'LL p-val','UL p-val','ED50 p-val', 'CC50')
+  }
   
+  if(CCX==FALSE)
+  {
+    results <- data.frame(matrix(NA, ncol=19, nrow=1))
+    colnames(results) <- c('Drug', 'F val', 'p-val',
+                           'Slope', 'LL','UL', 'ED50',
+                           'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                           'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                           'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
+  }
   
   drug_name <- df[1, 3]
   
@@ -219,32 +232,168 @@ DRC <- function(df, normilized=TRUE,
   
   colnames(df) <- c("C_mkM", "D555")
   
-  model <- drm(D555 ~ C_mkM,
+  model <- try_model_fun(code=(drm(D555 ~ C_mkM,
                data = df,
-               fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))
+               fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))))
+  #Logic variable: TRUE - converge error, FALSE - normals
+  converge_error <- is.logical(model)
   
-  model_fit <- data.frame(modelFit(model))
-  coeffs <- summary(model)$coefficients
-  
-  results$Drug <- drug_name
-  results$`F val` <- round(model_fit$"F.value"[2], digits=3)
-  results$`p-val` <- round(model_fit$"p.value"[2], digits=3)
-  
-  i <- 4
-  for(coef in coeffs)
+  if (converge_error==FALSE) # No converge error
   {
-    results[1, i] <- round(coef, digits=3)
-    i <- i + 1
+    model_fit <- data.frame(modelFit(model))
+    coeffs <- summary(model)$coefficients
+    
+    results$Drug <- drug_name
+    results$`F val` <- round(model_fit$"F.value"[2], digits=3)
+    results$`p-val` <- round(model_fit$"p.value"[2], digits=3)
+    
+    i <- 4
+    for(coef in coeffs)
+    {
+      results[1, i] <- round(coef, digits=3)
+      i <- i + 1
+    }
   }
   
-  results$CC50 <- CCX(model=model, start_dose=start_dose,
-                      step_dose=step_dose, X=X)
+  if (converge_error==TRUE) # Converge error
+  {
+    results$Drug <- drug_name
+    sprintf('Converged error for %s', drug_name)
+  }
   
-  if(plot==TRUE)
+  
+  if(CCX==TRUE & converge_error==FALSE)
+  {
+    results$CC50 <- CCX(model=model, start_dose=start_dose,
+                        step_dose=step_dose, X=X)
+  }
+  
+  
+  if(plot==TRUE & converge_error==FALSE)
   {
     plot(model, broken=TRUE, bty="l",
          xlab="Log(drug concentration)", ylab="Response",
          main=drug_name, type="all")
   }
+  
+  if(save_plot==TRUE & converge_error==FALSE)
+  {
+    path_to_image <- paste(path_export, '/', drug_name,'.jpeg', sep="")
+    dev.copy(jpeg, filename=path_to_image)
+    dev.off() # Close plots
+  }
+  
   return(results)
 }
+
+# Fit curves for drugs in list drug_names
+DRC_bunch <- function(df, drug_names, controls,
+                      normilized=TRUE, start_dose=100,
+                      step_dose=0.02, X=50,
+                      path_export=".", export=TRUE,
+                      plot=TRUE, save_plot=TRUE, CCX=TRUE)
+{
+  # Create an empty data frame for bind resuls
+  if(CCX==TRUE)
+  {
+    GKs <- data.frame(matrix(NA, ncol=20, nrow=0))
+    colnames(GKs) <- c('Drug', 'F val', 'p-val',
+                       'Slope', 'LL','UL', 'ED50',
+                       'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                       'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                       'Slope p-val', 'LL p-val','UL p-val','ED50 p-val',
+                       'CC50')
+  }
+  
+  if(CCX==FALSE)
+  {
+    GKs <- data.frame(matrix(NA, ncol=19, nrow=0))
+    colnames(GKs) <- c('Drug', 'F val', 'p-val',
+                       'Slope', 'LL','UL', 'ED50',
+                       'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                       'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                       'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
+  }
+  
+  
+  for (name in drug_names)
+  {
+    drug <- Subset(df, name)
+    drug <- Normalization(drug, controls)
+    drug <- RmOutliers(drug)
+    statistics <- DRC(df=drug, normilized=normilized,
+                      start_dose=start_dose, step_dose=step_dose,
+                      X=X, plot=plot, save_plot=save_plot, CCX=CCX)
+    GKs <- rbind(GKs, statistics)
+    if(export==TRUE)
+    {
+      path <- paste(path_export, '/', name,'.xlsx', sep="")
+      write_xlsx(drug, path)
+    }
+  }
+  return(GKs)
+}
+
+# Fit linear model and find CC50, SE, CIs for one drug
+# name, from, to are str and int
+CC50_slope <- function(df, name, controls, normalized=TRUE,
+                       from, to, response=c(50))
+{
+  drug <- Subset(df, name)
+  if(normalized==TRUE)
+  {
+    drug <- Normalization(drug, controls=controls)
+  }
+  
+  drug <- RmOutliers(drug)
+  drug <- drug[from:to, ]
+  
+  if(normalized==TRUE)
+  {
+    model <- lm(C_mkM ~ D555_N, data=drug)
+  }
+  
+  if(normalized==FALSE)
+  {
+    model <- lm(C_mkM ~ D555, data=drug)
+  }
+  
+  
+  predition <- predict(model, data.frame(D555_N=response),
+                       se.fit=TRUE, interval = "confidence")
+  
+  results <- data.frame(matrix(NA, ncol=5, nrow=1))
+  colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
+  results[1] <- drug[1,3]
+  results[2:4] <- predition$fit
+  results[5] <- predition$se.fit
+  
+  return(results)
+}
+
+# Fit linear model and find CC50, SE, CIs for several drugs
+# drug_names, from, to are vectors
+CC50_slope_bunch <- function(df, drug_names, controls,
+                             from, to, response, normalized=TRUE)
+{
+  results <- data.frame(matrix(NA, ncol=5, nrow=0))
+  colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
+  
+  for (i in 1:length(drug_names))
+  {
+    print(i)
+    temp <- CC50_slope(df=df, name=drug_names[i],
+                       controls=controls,
+                       from=from[i], to=to[i], response=response)
+    results <- rbind(results, temp)
+  }
+  return(results)
+}
+
+try_model_fun <- function(code)
+{
+  temp <- try(code, silent = TRUE)
+  if (class(temp)=="try-error") temp <- NA
+  return(temp)
+}
+

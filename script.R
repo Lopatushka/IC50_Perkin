@@ -1,16 +1,15 @@
 source("functions.R")
 
 # Paths to files
-path_data1 <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/HEK293 lena.xls"
-path_data2 <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/HEK293 lena+skv.xls"
-path_names <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/names.xlsx"
-path_conc <- "C:/Users/User/Documents/Work/Data/MTT/SKV/200519/concentrations.xlsx"
-#path_export <- "C:/Users/acer/Desktop/Work/Data/MTT/SKV/plots_new/HEK293/HEK293_results.xlsx"
+path_data1 <- "C:/Users/User/Documents/Work/Data/MTT/28.05.2021_MTT/row_data/28.05.21_PC3.xls"
+path_names <- "C:/Users/User/Documents/Work/Data/MTT/28.05.2021_MTT/row_data/names.xlsx"
+path_conc <- "C:/Users/User/Documents/Work/Data/MTT/28.05.2021_MTT/row_data/concentrations.xlsx"
+path_export <- "C:/Users/User/Documents/Work/Data/MTT/28.05.2021_MTT/PC3"
 
 # Download and process row data
-data1 <- ImportDataFile(path_data1)
-data2 <- ImportDataFile(path_data2)
-data <- CombineTwoDataFiles(data1, data2)
+data <- ImportDataFile(path_data1)
+#data2 <- ImportDataFile(path_data2)
+#data <- CombineTwoDataFiles(data1, data2)
 data <- AddDrugNames(data, path_names)
 data <- AddConcentrations(data)
 data <- DropNull(data)
@@ -20,41 +19,36 @@ drug_names <- unique(data$Drug)
 
 # Subset and plot control (DMSO)
 sb1 <- Subset(data, "DMSO")
-sb2 <- Subset(data, "DMSO_2")
 Plot(sb1)
-Plot(sb2)
 
 # Find control medians and replace outliers
 control_medians_1 <- RmOutliersFromControl(sb1)
-#control_medians_2 <- RmOutliersFromControl(sb2)
 
-# Subset particular drug, normilize data and plot results
-drug <- Subset(data, "GK142p")
-Plot(drug)
-drug <- Normalization(drug, control_medians_1)
-drug <- RmOutliers(drug)
-Plot(drug, y=drug$D555_N)
-#drug[-c(11:19), ]
+# Fit curve: bunch processing
+curves <- DRC_bunch(df=data, drug_names=drug_names,
+                    controls=control_medians_1,
+                    normilized=TRUE, start_dose=100,
+                    step_dose=0.02, X=50, plot=TRUE, save_plot=TRUE,
+                    path_export=path_export, export=TRUE, CCX=TRUE)
+
+# Fit CC50: bunch procassing
+PC3_from <- c(13, 1, 6, 1, 2, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 6, 9, 6, 2, 1, 5, 2, 13, 2, 2, 1, 4, 1, 1, 1, 3, 1)
+PC3_to <- c(18, 24, 14, 24, 5, 9, 6, 6, 6, 24, 24, 6, 8, 24, 4, 24, 11, 12, 11, 7, 7, 12, 10, 18, 10, 10, 5, 9, 24, 24, 9, 7, 7)
+
+CC50s <- CC50_slope_bunch(df=data, drug_names=drug_names,
+                          controls=control_medians_1,
+                          from=PC3_from,
+                          to=PC3_to,
+                          response=c(50))
 
 
-# Fit the model and plot it
-statistics <- DRC(df=drug, normilized=TRUE,
-                  start_dose=100, step_dose=0.02,
-                  X=50, plot=TRUE)
 
-# Create an empty data frame for bind resuls
-GKs <- data.frame(matrix(NA, ncol=20, nrow=0))
-colnames(GKs) <- c('Drug', 'F val', 'p-val',
-                   'Slope', 'LL','UL', 'ED50',
-                   'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
-                   'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
-                   'Slope p-val', 'LL p-val','UL p-val','ED50 p-val',
-                   'CC50')
+# Construct final table and export it
+final_table <- cbind(curves, CC50s)
+write_xlsx(curves,
+           paste(path_export, "/", "PC3_final_table.xlsx", sep=""))
 
-# Add statistics to summary dataframe
-GKs <- rbind(GKs, statistics)
-
-# Export summary data frame
-write_xlsx(GKs, path_export)
-
-write_xlsx(statistics, "C:/Users/User/Documents/Work/Data/MTT/SKV/GK136-916.xlsx")
+slope <- CC50_slope(df=data, name = "EC52",
+                    controls = control_medians_1,
+                    from=1, to=4, response=c(50))
+slope

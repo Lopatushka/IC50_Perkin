@@ -186,7 +186,7 @@ CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
 {
   dose <- start_dose
   result <- predict(model, data.frame(dose), se.fit=TRUE)
-  while(result[[1]]<X)
+  while(result[[1]]<X & dose > step_dose)
   {
     dose <- dose-step_dose
     result <- predict(model, data.frame(dose), se.fit=TRUE)
@@ -197,9 +197,9 @@ CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
 # Fit curve for one drug
 DRC <- function(df, normilized=TRUE,
                 start_dose=100, step_dose=0.02, X=50,
-                plot=TRUE, save_plot=TRUE, path_export=".", CCX=TRUE)
+                plot=TRUE, save_plot=TRUE, path_export=".", need_CCX=TRUE)
 {
-  if(CCX==TRUE)
+  if(need_CCX==TRUE)
   {
     results <- data.frame(matrix(NA, ncol=20, nrow=1))
     colnames(results) <- c('Drug', 'F val', 'p-val',
@@ -209,7 +209,7 @@ DRC <- function(df, normilized=TRUE,
                            'Slope p-val', 'LL p-val','UL p-val','ED50 p-val', 'CC50')
   }
   
-  if(CCX==FALSE)
+  if(need_CCX==FALSE)
   {
     results <- data.frame(matrix(NA, ncol=19, nrow=1))
     colnames(results) <- c('Drug', 'F val', 'p-val',
@@ -262,7 +262,7 @@ DRC <- function(df, normilized=TRUE,
   }
   
   
-  if(CCX==TRUE & converge_error==FALSE)
+  if(need_CCX==TRUE & converge_error==FALSE)
   {
     results$CC50 <- CCX(model=model, start_dose=start_dose,
                         step_dose=step_dose, X=X)
@@ -291,10 +291,10 @@ DRC_bunch <- function(df, drug_names, controls,
                       normilized=TRUE, start_dose=100,
                       step_dose=0.02, X=50,
                       path_export=".", export=TRUE,
-                      plot=TRUE, save_plot=TRUE, CCX=TRUE)
+                      plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
 {
   # Create an empty data frame for bind resuls
-  if(CCX==TRUE)
+  if(need_CCX==TRUE)
   {
     GKs <- data.frame(matrix(NA, ncol=20, nrow=0))
     colnames(GKs) <- c('Drug', 'F val', 'p-val',
@@ -305,7 +305,7 @@ DRC_bunch <- function(df, drug_names, controls,
                        'CC50')
   }
   
-  if(CCX==FALSE)
+  if(need_CCX==FALSE)
   {
     GKs <- data.frame(matrix(NA, ncol=19, nrow=0))
     colnames(GKs) <- c('Drug', 'F val', 'p-val',
@@ -323,7 +323,7 @@ DRC_bunch <- function(df, drug_names, controls,
     drug <- RmOutliers(drug)
     statistics <- DRC(df=drug, normilized=normilized,
                       start_dose=start_dose, step_dose=step_dose,
-                      X=X, plot=plot, save_plot=save_plot, CCX=CCX)
+                      X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
     GKs <- rbind(GKs, statistics)
     if(export==TRUE)
     {

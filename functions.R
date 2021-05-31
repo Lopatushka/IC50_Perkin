@@ -276,7 +276,7 @@ DRC <- function(df, normilized=TRUE,
          main=drug_name, type="all")
   }
   
-  if(save_plot==TRUE & converge_error==FALSE)
+  if(save_plot==TRUE)
   {
     path_to_image <- paste(path_export, '/', drug_name,'.jpeg', sep="")
     dev.copy(jpeg, filename=path_to_image)

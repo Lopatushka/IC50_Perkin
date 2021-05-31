@@ -29,7 +29,7 @@ curves <- DRC_bunch(df=data, drug_names=drug_names,
                     controls=control_medians_1,
                     normilized=TRUE, start_dose=100,
                     step_dose=0.02, X=50, plot=TRUE, save_plot=TRUE,
-                    path_export=path_export, export=FALSE, CCX=TRUE)
+                    path_export=path_export, export=TRUE, need_CCX=TRUE)
 
 exclude=c("PAV7", )
 

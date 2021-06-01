@@ -549,7 +549,7 @@ DRC_MISIS <- function(df, normilized=TRUE,
 }
 
 # Fit curves for drugs in list drug_names
-DRC_bunch_MISIS <- function(df, drug_names, controls, conc
+DRC_bunch_MISIS <- function(df, drug_names, controls, conc,
                             normilized=TRUE, step_dose=0.02, X=50,
                             path_export=".", export=TRUE,
                             plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
@@ -576,12 +576,13 @@ DRC_bunch_MISIS <- function(df, drug_names, controls, conc
                        'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
   }
   
-  #name="DG603k"
   for (name in drug_names)
   {
     drug <- Subset_MISIS(df, name)
+    
     replics <- conc$n_replicates[match(name, conc$drug)]
     drug <- Normalization(drug, controls, n_replicates = replics)
+    
     drug <- RmOutliers(drug)
     statistics <- DRC_MISIS(df=drug, normilized=normilized,
                             step_dose=step_dose, path_export=path_export,
@@ -599,12 +600,13 @@ DRC_bunch_MISIS <- function(df, drug_names, controls, conc
 # Fit linear model and find CC50, SE, CIs for one drug
 # name, from, to are str and int
 CC50_slope_MISIS <- function(df, name, controls, normalized=TRUE,
-                             from, to, response=c(50))
+                             from, to, response=c(50), conc)
 {
   drug <- Subset_MISIS(df, name)
   if(normalized==TRUE)
   {
-    drug <- Normalization(drug, controls=controls)
+    replics <- conc$n_replicates[match(name, conc$drug)]
+    drug <- Normalization(drug, controls=controls, n_replicates = replics)
   }
   
   drug <- RmOutliers(drug)
@@ -636,7 +638,7 @@ CC50_slope_MISIS <- function(df, name, controls, normalized=TRUE,
 
 # Fit linear model and find CC50, SE, CIs for several drugs
 # drug_names, from, to are vectors
-CC50_slope_bunch_MISIS <- function(df, controls,
+CC50_slope_bunch_MISIS <- function(df, controls, conc,
                                    boundaries, normalized=TRUE,
                                    exclude=c())
 {
@@ -650,7 +652,7 @@ CC50_slope_bunch_MISIS <- function(df, controls,
     if(!is.element(boundaries$name[i], exclude))
     {
       temp <- CC50_slope_MISIS(df=df, name=boundaries$name[i],
-                               controls=controls,
+                               controls=controls, conc=conc,
                                from=boundaries$from[i], to=boundaries$to[i],
                                response=boundaries$response[i])
       results <- rbind(results, temp)
@@ -659,3 +661,4 @@ CC50_slope_bunch_MISIS <- function(df, controls,
   }
   return(results)
 }
+

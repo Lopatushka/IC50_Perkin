@@ -1,5 +1,8 @@
-# Libraries
+# Import packages
 library(readxl)
+library(drc)
+library(outliers)
+library(writexl)
 
 # Paths
 path_data <- "C:/Users/User/Documents/Work/Data/MTS/12.04.21_MTS/row data/12.04.21_MTS_MCF7.xlsx"
@@ -60,7 +63,7 @@ Subset_MISIS <- function(df, name)
 }
 
 # Plot subset
-Plot_MISIS <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
+Plot <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
 {
   if(log==TRUE)
   {
@@ -71,16 +74,199 @@ Plot_MISIS <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
        xlab='Log10[C], mkM', ylab='D555', main=df[1, 3])
 }
 
+# Find medians of D555 data. Return vector
+FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
+{
+  medians <- c()
+  i <- 1
+  while (i < n_dilutions*n_replicates + 1)
+  {
+    median <- median(df$D555[i:(i+2)])
+    medians <- c(medians, median)
+    i <- i + 3
+  }
+  medians <- medians[!is.na(medians)]
+  return(medians)
+}
 
+# Find plateau in control (DMSO) subset using linear regression
+FindPlateuForControl <- function(df, alpha=0.05)
+{
+  notPlateu <- data.frame(matrix(ncol = ncol(df), nrow = 0))
+  colnames(notPlateu) <- colnames(df)
+  
+  lm <- lm(df$D555 ~ df$C_mkM)
+  p_val <- summary(lm)$coefficients[2,4]
+  
+  while (p_val < alpha)
+  {
+    notPlateu <- rbind(notPlateu, df[(1:3), ])
+    df <- df[-(1:3), ]
+    lm <- lm(df$D555 ~ df$C_mkM)
+    p_val <- summary(lm)$coefficients[2,4]
+  }
+  
+  return(list(df, notPlateu))
+}
+
+# Remove outliers in control medians and replace them with median values
+# Return vector
+RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3)
+{
+  pl <- FindPlateuForControl(df, alpha=alpha)[[1]]
+  non_pl <- FindPlateuForControl(df, alpha=alpha)[[2]]
+  
+  pl_medians <- FindMedians(pl, n_dilutions=n_dilutions,  n_replicates=n_replicates)
+  pl_medians <- rm.outlier(x=pl_medians, fill=TRUE, median=TRUE)
+  
+  non_pl_medians <- FindMedians(non_pl, n_dilutions=n_dilutions,  n_replicates=n_replicates)
+  if(length(non_pl_medians)==0){
+    non_pl_medians_rm <- NULL
+  }
+  if(length(non_pl_medians)==1){
+    non_pl_medians_rm <- non_pl_medians
+  }
+  if(length(non_pl_medians)>1){
+    non_pl_medians_rm <- rm.outlier(x=non_pl_medians, fill=TRUE, median=TRUE)
+  }
+  
+  return(c(non_pl_medians_rm, pl_medians))
+  
+  
+}
+
+RmOutliers <- function(df, var="D555")
+{
+  return(df[!outlier(df[[var]], logical = TRUE), ])
+}
+
+
+# Create a new col D555_N in data subset by normalizing D555 by control vector
+# Return subset
+Normalization <- function(df, controls, n_replicates=3)
+{
+  df$D555_N <- 100*df$D555/rep(controls, each=n_replicates)
+  return(df)
+}
+
+# Find CC50 (or others) using predict fun. Return CC50 concentration without SE
+CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
+{
+  dose <- start_dose
+  result <- predict(model, data.frame(dose), se.fit=TRUE)
+  while(result[[1]]<X & dose > step_dose)
+  {
+    dose <- dose-step_dose
+    result <- predict(model, data.frame(dose), se.fit=TRUE)
+  }
+  return(dose)
+}
+
+# Fit curve for one drug
+DRC_MISIS <- function(df, normilized=TRUE,
+                start_dose=100, step_dose=0.02, X=50,
+                plot=TRUE, save_plot=TRUE, path_export=".", need_CCX=TRUE)
+{
+  if(need_CCX==TRUE)
+  {
+    results <- data.frame(matrix(NA, ncol=20, nrow=1))
+    colnames(results) <- c('Drug', 'F val', 'p-val',
+                           'Slope', 'LL','UL', 'ED50',
+                           'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                           'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                           'Slope p-val', 'LL p-val','UL p-val','ED50 p-val', 'CC50')
+  }
+  
+  if(need_CCX==FALSE)
+  {
+    results <- data.frame(matrix(NA, ncol=19, nrow=1))
+    colnames(results) <- c('Drug', 'F val', 'p-val',
+                           'Slope', 'LL','UL', 'ED50',
+                           'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                           'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                           'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
+  }
+  
+  drug_name <- df[1, 3]
+  
+  if(normilized==TRUE)
+  {
+    df=df[, c(1,4)]
+  }
+  if(normilized==FALSE)
+  {
+    df=df[, c(1,2)]
+  }
+  
+  colnames(df) <- c("C_mkM", "D555")
+  
+  model <- try_model_fun(code=(drm(D555 ~ C_mkM,
+                                   data = df,
+                                   fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))))
+  #Logic variable: TRUE - converge error, FALSE - normals
+  converge_error <- is.logical(model)
+  
+  if (converge_error==FALSE) # No converge error
+  {
+    model_fit <- data.frame(modelFit(model))
+    coeffs <- summary(model)$coefficients
+    
+    results$Drug <- drug_name
+    results$`F val` <- round(model_fit$"F.value"[2], digits=3)
+    results$`p-val` <- round(model_fit$"p.value"[2], digits=3)
+    
+    i <- 4
+    for(coef in coeffs)
+    {
+      results[1, i] <- round(coef, digits=3)
+      i <- i + 1
+    }
+  }
+  
+  if (converge_error==TRUE) # Converge error
+  {
+    results$Drug <- drug_name
+    sprintf('Converged error for %s', drug_name)
+  }
+  
+  
+  if(need_CCX==TRUE & converge_error==FALSE)
+  {
+    results$CC50 <- CCX(model=model, start_dose=start_dose,
+                        step_dose=step_dose, X=X)
+  }
+  
+  
+  if(plot==TRUE & converge_error==FALSE)
+  {
+    plot(model, broken=TRUE, bty="l",
+         xlab="Log(drug concentration)", ylab="Response",
+         main=drug_name, type="all")
+  }
+  
+  if(save_plot==TRUE)
+  {
+    path_to_image <- paste(path_export, '/', drug_name,'.jpeg', sep="")
+    dev.copy(jpeg, filename=path_to_image)
+    dev.off() # Close plots
+  }
+  
+  return(results)
+}
+
+try_model_fun <- function(code)
+{
+  temp <- try(code, silent = TRUE)
+  if (class(temp)=="try-error") temp <- NA
+  return(temp)
+}
 
 # Function callings
 data1 <- ImportDataFile_MISIS(path_data=path_data)
 data1 <- SubstractBackground_MISIS(data1, 490, 700)
 data1 <- DropBlank_MISIS(data1)
-
 drug_names <- unique(data1$Образец)
 drug_names
-
 conc_info <- list(drug=drug_names,
              stock_conc=c(20.08, 20.02, 20.08, 19.99, 20, 20),
              first_dilution=rep(200, 6),
@@ -88,15 +274,21 @@ conc_info <- list(drug=drug_names,
              n_dilutions=rep(8, 6),
              n_replicates=rep(3, 6))
 
-
 data1 <- AddConcentrations_MISIS(data1, conc_info)
 
-drug <- Subset_MISIS(data1, "DG605k")
-
-Plot(drug)
-
+controls_dil2 <- RmOutliersFromControl(Subset_MISIS(data1, "DMSO-dil2"))
+controls_dil3 <- RmOutliersFromControl(Subset_MISIS(data1, "DMSO-dil3"))
 
 
 # Draft
-df <- drug
-name <- "DG4ClSe"
+df <- drug_N
+
+drug <- Subset_MISIS(data1, "DG605k")
+Plot(drug)
+
+drug <- Normalization(drug, controls_dil2)
+Plot(drug, x=drug$C_mkM, y=drug$D555_N)
+
+result <- DRC_MISIS(df=drug, normilized=TRUE,
+    start_dose=100, step_dose=0.02, X=50,
+    plot=TRUE, save_plot=FALSE, path_export=".", need_CCX=TRUE)

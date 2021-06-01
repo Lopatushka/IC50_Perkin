@@ -53,10 +53,22 @@ AddConcentrations_MISIS <- function(df, conc)
 Subset_MISIS <- function(df, name)
 {
   drug <- subset(df, df$Образец==name)
-  drug <- drug[, c(9, 7)]
-  colnames(drug) <- c("C_mkM", "D555")
+  drug <- drug[, c(9, 7, 5)]
+  colnames(drug) <- c("C_mkM", "D555", "Drug")
   drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
   return(drug)
+}
+
+# Plot subset
+Plot_MISIS <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
+{
+  if(log==TRUE)
+  {
+    x=log10(x)
+  }
+  plot(x=x,
+       y=y,
+       xlab='Log10[C], mkM', ylab='D555', main=df[1, 3])
 }
 
 
@@ -79,11 +91,12 @@ conc_info <- list(drug=drug_names,
 
 data1 <- AddConcentrations_MISIS(data1, conc_info)
 
+drug <- Subset_MISIS(data1, "DG605k")
 
-
+Plot(drug)
 
 
 
 # Draft
-df <- data1
+df <- drug
 name <- "DG4ClSe"

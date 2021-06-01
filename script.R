@@ -51,12 +51,13 @@ CC50s <- CC50_slope_bunch(df=data, controls=control_medians_1,
 # Construct final table and export it
 final_table <- merge(curves, CC50s, by="Drug", all = T)
 
-write_xlsx(final_table,
-           paste(path_export, "/", "Huh7_final_table.xlsx", sep=""))
+write_xlsx(curves,
+           paste(path_export, "/", "HEK293_final_table.xlsx", sep=""))
 
 
 
-slope <- CC50_slope(df=data, name = "PAV6",
+slope <- CC50_slope(df=data, name = "EC51",
                     controls = control_medians_1,
-                    from=3, to=6, response=c(50))
+                    from=2, to=4, response=c(50))
+
 slope

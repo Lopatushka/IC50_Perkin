@@ -58,9 +58,6 @@ AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
     concentrations[row,] <- concentrations[row-1, ]/step_dilution
   }
   
-  #log10 transformation
-  #concentrations[2:nrow(concentrations), ] <- log10(concentrations[2:nrow(concentrations),])
-  
   # Add null to Drug null
   df$C_mkM <- NA
   df$C_mkM[df$Drug == 'null'] <- 'null'

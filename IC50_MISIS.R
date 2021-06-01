@@ -27,9 +27,63 @@ SubstractBackground_MISIS <- function(df, wlength=490, backwlength=700)
 
 DropBlank_MISIS <- function(df) return(df[!df$Тип=="Бланк",])
 
+AddConcentrations_MISIS <- function(df, conc)
+{
+  temp <- data.frame(matrix(NA, ncol=length(conc$drug), nrow=max(conc$n_dilutions)))
+  rownames(temp) <- paste("C_mkM", 1:max(conc$n_dilutions),  sep="_")
+  colnames(temp) <- conc$drug
+  temp[1, ] <- 1000*conc$stock_conc/conc$first_dilution
+  for(i in 1:(max(conc$n_dilutions)-1)) temp[i+1, ] <- temp[i, ]/conc$step_dilution
+  
+  df$C_mkM <- NA
+  for (i in 1:length(unique(df$Образец)))
+  {
+    drug <- unique(df$Образец)[i]
+    drug_conc <- temp[colnames(temp) == drug][[1]]
+    df$C_mkM[df$Образец==drug] <- rep(drug_conc, conc$n_replicates[i])
+  }
+  
+  # Convert concentrations to numbers
+  df$C_mkM <- sapply(df$C_mkM, as.double)
+  
+  return(df)
+}
+
+# Subset rows with particular drug name
+Subset_MISIS <- function(df, name)
+{
+  drug <- subset(df, df$Образец==name)
+  drug <- drug[, c(9, 7)]
+  colnames(drug) <- c("C_mkM", "D555")
+  drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
+  return(drug)
+}
+
+
+
 # Function callings
 data1 <- ImportDataFile_MISIS(path_data=path_data)
 data1 <- SubstractBackground_MISIS(data1, 490, 700)
 data1 <- DropBlank_MISIS(data1)
 
+drug_names <- unique(data1$Образец)
+drug_names
 
+conc_info <- list(drug=drug_names,
+             stock_conc=c(20.08, 20.02, 20.08, 19.99, 20, 20),
+             first_dilution=rep(200, 6),
+             step_dilution=c(3, 3, 2, 2, 2, 3),
+             n_dilutions=rep(8, 6),
+             n_replicates=rep(3, 6))
+
+
+data1 <- AddConcentrations_MISIS(data1, conc_info)
+
+
+
+
+
+
+# Draft
+df <- data1
+name <- "DG4ClSe"

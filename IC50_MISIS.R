@@ -164,7 +164,7 @@ CCX <- function(model, start_dose=100, step_dose=0.01, X=50)
 
 # Fit curve for one drug
 DRC_MISIS <- function(df, normilized=TRUE,
-                start_dose=100, step_dose=0.02, X=50,
+                step_dose=0.02, X=50,
                 plot=TRUE, save_plot=TRUE, path_export=".", need_CCX=TRUE)
 {
   if(need_CCX==TRUE)
@@ -232,7 +232,7 @@ DRC_MISIS <- function(df, normilized=TRUE,
   
   if(need_CCX==TRUE & converge_error==FALSE)
   {
-    results$CC50 <- CCX(model=model, start_dose=start_dose,
+    results$CC50 <- CCX(model=model, start_dose=df$C_mkM[1],
                         step_dose=step_dose, X=X)
   }
   
@@ -261,6 +261,117 @@ try_model_fun <- function(code)
   return(temp)
 }
 
+# Fit curves for drugs in list drug_names
+DRC_bunch_MISIS <- function(df, drug_names, controls,
+                      normilized=TRUE, step_dose=0.02, X=50,
+                      path_export=".", export=TRUE,
+                      plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
+{
+  # Create an empty data frame for bind resuls
+  if(need_CCX==TRUE)
+  {
+    GKs <- data.frame(matrix(NA, ncol=20, nrow=0))
+    colnames(GKs) <- c('Drug', 'F val', 'p-val',
+                       'Slope', 'LL','UL', 'ED50',
+                       'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                       'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                       'Slope p-val', 'LL p-val','UL p-val','ED50 p-val',
+                       'CC50')
+  }
+  
+  if(need_CCX==FALSE)
+  {
+    GKs <- data.frame(matrix(NA, ncol=19, nrow=0))
+    colnames(GKs) <- c('Drug', 'F val', 'p-val',
+                       'Slope', 'LL','UL', 'ED50',
+                       'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                       'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                       'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
+  }
+  
+  
+  for (name in drug_names)
+  {
+    drug <- Subset_MISIS(df, name)
+    drug <- Normalization(drug, controls)
+    drug <- RmOutliers(drug)
+    statistics <- DRC_MISIS(df=drug, normilized=normilized,
+                      step_dose=step_dose,
+                      X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
+    GKs <- rbind(GKs, statistics)
+    if(export==TRUE)
+    {
+      path <- paste(path_export, '/', name,'.xlsx', sep="")
+      write_xlsx(drug, path)
+    }
+  }
+  return(GKs)
+}
+
+# Fit linear model and find CC50, SE, CIs for one drug
+# name, from, to are str and int
+CC50_slope_MISIS <- function(df, name, controls, normalized=TRUE,
+                       from, to, response=c(50))
+{
+  drug <- Subset_MISIS(df, name)
+  if(normalized==TRUE)
+  {
+    drug <- Normalization(drug, controls=controls)
+  }
+  
+  drug <- RmOutliers(drug)
+  drug <- drug[from:to, ]
+  
+  if(normalized==TRUE)
+  {
+    model <- lm(C_mkM ~ D555_N, data=drug)
+  }
+  
+  if(normalized==FALSE)
+  {
+    model <- lm(C_mkM ~ D555, data=drug)
+  }
+  
+  
+  predition <- predict(model, data.frame(D555_N=response),
+                       se.fit=TRUE, interval = "confidence")
+  
+  results <- data.frame(matrix(NA, ncol=5, nrow=1))
+  colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
+  results[1] <- drug[1,3]
+  results[2:4] <- predition$fit
+  results[5] <- predition$se.fit
+  
+  return(results)
+}
+
+
+# Fit linear model and find CC50, SE, CIs for several drugs
+# drug_names, from, to are vectors
+CC50_slope_bunch_MISIS <- function(df, controls,
+                             boundaries, normalized=TRUE,
+                             exclude=c())
+{
+  results <- data.frame(matrix(NA, ncol=5, nrow=0))
+  colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
+  
+  n_drugs <- length(boundaries$name) - length(exclude)
+  for (i in 1:n_drugs)
+  {
+    #print(c(i, boundaries$name[i], boundaries$from[i], boundaries$to[i]))
+    if(!is.element(boundaries$name[i], exclude))
+    {
+      temp <- CC50_slope_MISIS(df=df, name=boundaries$name[i],
+                         controls=controls,
+                         from=boundaries$from[i], to=boundaries$to[i],
+                         response=boundaries$response[i])
+      results <- rbind(results, temp)
+    }
+    
+  }
+  return(results)
+}
+
 # Function callings
 data1 <- ImportDataFile_MISIS(path_data=path_data)
 data1 <- SubstractBackground_MISIS(data1, 490, 700)
@@ -281,7 +392,9 @@ controls_dil3 <- RmOutliersFromControl(Subset_MISIS(data1, "DMSO-dil3"))
 
 
 # Draft
-df <- drug_N
+df <- drug
+
+
 
 drug <- Subset_MISIS(data1, "DG605k")
 Plot(drug)
@@ -289,6 +402,25 @@ Plot(drug)
 drug <- Normalization(drug, controls_dil2)
 Plot(drug, x=drug$C_mkM, y=drug$D555_N)
 
-result <- DRC_MISIS(df=drug, normilized=TRUE,
-    start_dose=100, step_dose=0.02, X=50,
+result <- DRC_MISIS(df=drug, normilized=TRUE,step_dose=0.02, X=50,
     plot=TRUE, save_plot=FALSE, path_export=".", need_CCX=TRUE)
+
+summary <- DRC_bunch_MISIS(df=data1, drug_names=c("DG4ClSe","DG603k","DG605k","DG618k"),
+                           controls=controls_dil2,
+                           normilized=TRUE, step_dose=0.02, X=50,
+                           path_export=".", export=FALSE,
+                           plot=TRUE, save_plot=FALSE, need_CCX=TRUE)
+
+CC50_slope_MISIS(data1, name="DG605k",
+                 controls=controls_dil2, normalized=TRUE, from=6, to=10)
+
+boundaries <- list(name=c("DG4ClSe","DG603k","DG605k","DG618k"),
+                   from=c(1, 6, 7, 4),
+                   to=c(6, 9, 11, 8),
+                   response=rep(50, 4))
+
+CC50s <- CC50_slope_bunch_MISIS(df=data1, controls=controls_dil2,
+                                boundaries=boundaries, normalized=TRUE,
+                                exclude=c())
+# Construct final table and export it
+final_table <- cbind(summary, CC50s)

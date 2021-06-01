@@ -576,14 +576,14 @@ DRC_bunch_MISIS <- function(df, drug_names, controls,
                        'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
   }
   
-  
+  #name="DG4ClSe"
   for (name in drug_names)
   {
     drug <- Subset_MISIS(df, name)
     drug <- Normalization(drug, controls)
     drug <- RmOutliers(drug)
     statistics <- DRC_MISIS(df=drug, normilized=normilized,
-                            step_dose=step_dose,
+                            step_dose=step_dose, path_export=path_export,
                             X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
     GKs <- rbind(GKs, statistics)
     if(export==TRUE)

@@ -549,7 +549,7 @@ DRC_MISIS <- function(df, normilized=TRUE,
 }
 
 # Fit curves for drugs in list drug_names
-DRC_bunch_MISIS <- function(df, drug_names, controls,
+DRC_bunch_MISIS <- function(df, drug_names, controls, conc
                             normilized=TRUE, step_dose=0.02, X=50,
                             path_export=".", export=TRUE,
                             plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
@@ -576,11 +576,12 @@ DRC_bunch_MISIS <- function(df, drug_names, controls,
                        'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
   }
   
-  #name="DG4ClSe"
+  #name="DG603k"
   for (name in drug_names)
   {
     drug <- Subset_MISIS(df, name)
-    drug <- Normalization(drug, controls)
+    replics <- conc$n_replicates[match(name, conc$drug)]
+    drug <- Normalization(drug, controls, n_replicates = replics)
     drug <- RmOutliers(drug)
     statistics <- DRC_MISIS(df=drug, normilized=normilized,
                             step_dose=step_dose, path_export=path_export,

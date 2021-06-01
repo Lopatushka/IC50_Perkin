@@ -139,7 +139,7 @@ FindMedians <- function(df, n_dilutions=8,  n_replicates=3)
   return(medians)
 }
 
-# Remove outliers in control medians and replce them with median values
+# Remove outliers in control medians and replace them with median values
 # Return vector
 RmOutliersFromControl <- function(df, alpha=0.05, n_dilutions=8,  n_replicates=3)
 {
@@ -401,3 +401,260 @@ try_model_fun <- function(code)
   return(temp)
 }
 
+# MISIS
+split_string <- function(s) return(strsplit(s, "_")[[1]][1])
+convert_to_numeric <- function(s) return(as.double(s))
+
+ImportDataFile_MISIS <- function(path_data)
+{
+  df <- read_excel(path_data)
+  colnames(df) <- df[2,]
+  df <- df[-c(1, 2), 1:8]
+  df$Образец <- sapply(df$Образец, split_string)
+  df$Погл. <- sapply(df$Погл., convert_to_numeric)
+  return(df)
+}
+
+SubstractBackground_MISIS <- function(df, wlength=490, backwlength=700)
+{
+  temp <- df[df$`Длина волны`==wlength,]
+  temp$Погл. <- df$Погл.[df$`Длина волны`==wlength]-df$Погл.[df$`Длина волны`==backwlength]
+  return(temp)
+}
+
+DropBlank_MISIS <- function(df) return(df[!df$Тип=="Бланк",])
+
+AddConcentrations_MISIS <- function(df, conc)
+{
+  temp <- data.frame(matrix(NA, ncol=length(conc$drug), nrow=max(conc$n_dilutions)))
+  rownames(temp) <- paste("C_mkM", 1:max(conc$n_dilutions),  sep="_")
+  colnames(temp) <- conc$drug
+  temp[1, ] <- 1000*conc$stock_conc/conc$first_dilution
+  for(i in 1:(max(conc$n_dilutions)-1)) temp[i+1, ] <- temp[i, ]/conc$step_dilution
+  
+  df$C_mkM <- NA
+  for (i in 1:length(unique(df$Образец)))
+  {
+    drug <- unique(df$Образец)[i]
+    drug_conc <- temp[colnames(temp) == drug][[1]]
+    df$C_mkM[df$Образец==drug] <- rep(drug_conc, conc$n_replicates[i])
+  }
+  
+  # Convert concentrations to numbers
+  df$C_mkM <- sapply(df$C_mkM, as.double)
+  
+  return(df)
+}
+
+# Subset rows with particular drug name
+Subset_MISIS <- function(df, name)
+{
+  drug <- subset(df, df$Образец==name)
+  drug <- drug[, c(9, 7, 5)]
+  colnames(drug) <- c("C_mkM", "D555", "Drug")
+  drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
+  return(drug)
+}
+
+# Fit curve for one drug
+DRC_MISIS <- function(df, normilized=TRUE,
+                      step_dose=0.02, X=50,
+                      plot=TRUE, save_plot=TRUE, path_export=".", need_CCX=TRUE)
+{
+  if(need_CCX==TRUE)
+  {
+    results <- data.frame(matrix(NA, ncol=20, nrow=1))
+    colnames(results) <- c('Drug', 'F val', 'p-val',
+                           'Slope', 'LL','UL', 'ED50',
+                           'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                           'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                           'Slope p-val', 'LL p-val','UL p-val','ED50 p-val', 'CC50')
+  }
+  
+  if(need_CCX==FALSE)
+  {
+    results <- data.frame(matrix(NA, ncol=19, nrow=1))
+    colnames(results) <- c('Drug', 'F val', 'p-val',
+                           'Slope', 'LL','UL', 'ED50',
+                           'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                           'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                           'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
+  }
+  
+  drug_name <- df[1, 3]
+  
+  if(normilized==TRUE)
+  {
+    df=df[, c(1,4)]
+  }
+  if(normilized==FALSE)
+  {
+    df=df[, c(1,2)]
+  }
+  
+  colnames(df) <- c("C_mkM", "D555")
+  
+  model <- try_model_fun(code=(drm(D555 ~ C_mkM,
+                                   data = df,
+                                   fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))))
+  #Logic variable: TRUE - converge error, FALSE - normals
+  converge_error <- is.logical(model)
+  
+  if (converge_error==FALSE) # No converge error
+  {
+    model_fit <- data.frame(modelFit(model))
+    coeffs <- summary(model)$coefficients
+    
+    results$Drug <- drug_name
+    results$`F val` <- round(model_fit$"F.value"[2], digits=3)
+    results$`p-val` <- round(model_fit$"p.value"[2], digits=3)
+    
+    i <- 4
+    for(coef in coeffs)
+    {
+      results[1, i] <- round(coef, digits=3)
+      i <- i + 1
+    }
+  }
+  
+  if (converge_error==TRUE) # Converge error
+  {
+    results$Drug <- drug_name
+    sprintf('Converged error for %s', drug_name)
+  }
+  
+  
+  if(need_CCX==TRUE & converge_error==FALSE)
+  {
+    results$CC50 <- CCX(model=model, start_dose=df$C_mkM[1],
+                        step_dose=step_dose, X=X)
+  }
+  
+  
+  if(plot==TRUE & converge_error==FALSE)
+  {
+    plot(model, broken=TRUE, bty="l",
+         xlab="Log(drug concentration)", ylab="Response",
+         main=drug_name, type="all")
+  }
+  
+  if(save_plot==TRUE)
+  {
+    path_to_image <- paste(path_export, '/', drug_name,'.jpeg', sep="")
+    dev.copy(jpeg, filename=path_to_image)
+    dev.off() # Close plots
+  }
+  
+  return(results)
+}
+
+# Fit curves for drugs in list drug_names
+DRC_bunch_MISIS <- function(df, drug_names, controls,
+                            normilized=TRUE, step_dose=0.02, X=50,
+                            path_export=".", export=TRUE,
+                            plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
+{
+  # Create an empty data frame for bind resuls
+  if(need_CCX==TRUE)
+  {
+    GKs <- data.frame(matrix(NA, ncol=20, nrow=0))
+    colnames(GKs) <- c('Drug', 'F val', 'p-val',
+                       'Slope', 'LL','UL', 'ED50',
+                       'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                       'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                       'Slope p-val', 'LL p-val','UL p-val','ED50 p-val',
+                       'CC50')
+  }
+  
+  if(need_CCX==FALSE)
+  {
+    GKs <- data.frame(matrix(NA, ncol=19, nrow=0))
+    colnames(GKs) <- c('Drug', 'F val', 'p-val',
+                       'Slope', 'LL','UL', 'ED50',
+                       'Slope SE', 'LL SE', 'UL SE', 'ED50 SE',
+                       'Slope t-val', 'LL t-val','UL t-val','ED50 t-val',
+                       'Slope p-val', 'LL p-val','UL p-val','ED50 p-val')
+  }
+  
+  
+  for (name in drug_names)
+  {
+    drug <- Subset_MISIS(df, name)
+    drug <- Normalization(drug, controls)
+    drug <- RmOutliers(drug)
+    statistics <- DRC_MISIS(df=drug, normilized=normilized,
+                            step_dose=step_dose,
+                            X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
+    GKs <- rbind(GKs, statistics)
+    if(export==TRUE)
+    {
+      path <- paste(path_export, '/', name,'.xlsx', sep="")
+      write_xlsx(drug, path)
+    }
+  }
+  return(GKs)
+}
+
+# Fit linear model and find CC50, SE, CIs for one drug
+# name, from, to are str and int
+CC50_slope_MISIS <- function(df, name, controls, normalized=TRUE,
+                             from, to, response=c(50))
+{
+  drug <- Subset_MISIS(df, name)
+  if(normalized==TRUE)
+  {
+    drug <- Normalization(drug, controls=controls)
+  }
+  
+  drug <- RmOutliers(drug)
+  drug <- drug[from:to, ]
+  
+  if(normalized==TRUE)
+  {
+    model <- lm(C_mkM ~ D555_N, data=drug)
+  }
+  
+  if(normalized==FALSE)
+  {
+    model <- lm(C_mkM ~ D555, data=drug)
+  }
+  
+  
+  predition <- predict(model, data.frame(D555_N=response),
+                       se.fit=TRUE, interval = "confidence")
+  
+  results <- data.frame(matrix(NA, ncol=5, nrow=1))
+  colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
+  results[1] <- drug[1,3]
+  results[2:4] <- predition$fit
+  results[5] <- predition$se.fit
+  
+  return(results)
+}
+
+
+# Fit linear model and find CC50, SE, CIs for several drugs
+# drug_names, from, to are vectors
+CC50_slope_bunch_MISIS <- function(df, controls,
+                                   boundaries, normalized=TRUE,
+                                   exclude=c())
+{
+  results <- data.frame(matrix(NA, ncol=5, nrow=0))
+  colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
+  
+  n_drugs <- length(boundaries$name) - length(exclude)
+  for (i in 1:n_drugs)
+  {
+    #print(c(i, boundaries$name[i], boundaries$from[i], boundaries$to[i]))
+    if(!is.element(boundaries$name[i], exclude))
+    {
+      temp <- CC50_slope_MISIS(df=df, name=boundaries$name[i],
+                               controls=controls,
+                               from=boundaries$from[i], to=boundaries$to[i],
+                               response=boundaries$response[i])
+      results <- rbind(results, temp)
+    }
+    
+  }
+  return(results)
+}

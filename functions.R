@@ -3,7 +3,7 @@ library(readxl)
 library(drc)
 library(outliers)
 library(writexl)
-library(plyr)
+library(dplyr)
 
 # Import .xls file with D555 data
 ImportDataFile <- function(path_data)
@@ -412,7 +412,7 @@ ImportDataFile_MISIS <- function(path_data)
   colnames(df) <- df[2,]
   df <- df[-c(1, 2), ]
   df <- df[, 1:8]
-  df[5] <- sapply(df[5], split_string)
+  df[5] <- unlist(map(strsplit(dplyr::pull(df[5]), split="_"), 1))
   df[7] <- sapply(df[7], convert_to_numeric)
   return(df)
 }

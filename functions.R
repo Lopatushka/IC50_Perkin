@@ -431,6 +431,8 @@ SubstractBackground_MISIS <- function(df, wlength=490, backwlength=700)
   return(temp)
 }
 
+DrugList_MISIS <- function(df) return(as.vector(unlist(unique(df[5]))))
+
 AddConcentrations_MISIS <- function(df, conc)
 {
   temp <- data.frame(matrix(NA, ncol=length(conc$drug), nrow=max(conc$n_dilutions)))
@@ -440,9 +442,10 @@ AddConcentrations_MISIS <- function(df, conc)
   for(i in 1:(max(conc$n_dilutions)-1)) temp[i+1, ] <- temp[i, ]/conc$step_dilution
   
   df$C_mkM <- NA
-  for (i in 1:length(unique(df[5])))
+  drug_list <- DrugList_MISIS(df)
+  for (i in 1:length(drug_list))
   {
-    drug <- unique(df[5])[[1]][i]
+    drug <- drug_list[i]
     drug_conc <- temp[colnames(temp) == drug][[1]]
     df$C_mkM[df[5]==drug] <- rep(drug_conc, conc$n_replicates[i])
   }

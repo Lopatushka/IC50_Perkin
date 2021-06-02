@@ -459,7 +459,7 @@ AddConcentrations_MISIS <- function(df, conc)
 # Subset rows with particular drug name
 Subset_MISIS <- function(df, name)
 {
-  drug <- subset(df, df[4]==name)
+  drug <- subset(df, df[5]==name)
   drug <- drug[, c(9, 7, 5)]
   colnames(drug) <- c("C_mkM", "D555", "Drug")
   drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]

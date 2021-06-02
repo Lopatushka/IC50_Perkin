@@ -9,7 +9,8 @@ export <- "C:/Users/User/Documents/Work/Data/MTS/09.04.21_MTS/MCF7"
 data <- ImportDataFile_MISIS(path_data=path_data)
 data <- SubstractBackground_MISIS(data, 490, 700)
 data <- DropBlank_MISIS_2(data)
-DrugList_MISIS(data)
+drug_names <- DrugList_MISIS(data)
+drug_names
 
 conc_info_HEK <- list(drug=drug_names,
                   stock_conc=c(20.07, 20.08, 20.08, 20.05, 19.99, 19.97, 20, 20),
@@ -35,8 +36,8 @@ conc_info_MCF7_09.04 <- list(drug=drug_names,
 
 data <- AddConcentrations_MISIS(data, conc_info_MCF7_09.04)
 
-controls_dil2 <- RmOutliersFromControl(Subset_MISIS(data, "DMSO-dil2"), n_replicates=3)
-controls_dil3 <- RmOutliersFromControl(Subset_MISIS(data, "DMSO-dil3"))
+controls_dil2 <- RmOutliersFromControl(Subset_MISIS(data, "DMSO"), n_replicates=3)
+#controls_dil3 <- RmOutliersFromControl(Subset_MISIS(data, "DMSO-dil3"))
 
 summary <- DRC_bunch_MISIS(df=data, drug_names=c("DG4CkSek","DG4ClSe","DG605k","DG606k","DG618k","DGAllC2"),
                            controls=controls_dil2, conc=conc_info_HEK,

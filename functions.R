@@ -3,6 +3,7 @@ library(readxl)
 library(drc)
 library(outliers)
 library(writexl)
+library(purrr)
 library(dplyr)
 
 # Import .xls file with D555 data
@@ -403,6 +404,12 @@ try_model_fun <- function(code)
 }
 
 # MISIS
+DropBlank_MISIS_2 <- function(df) 
+{
+  df_drop <- df[df[4]!="Бланк",]
+  return(df_drop)
+}
+
 split_string <- function(s) return(strsplit(s, "_")[[1]][1])
 convert_to_numeric <- function(s) return(as.double(s))
 
@@ -424,8 +431,6 @@ SubstractBackground_MISIS <- function(df, wlength=490, backwlength=700)
   return(temp)
 }
 
-DropBlank_MISIS <- function(df) return(df[!df$Тип=="Бланк",])
-
 AddConcentrations_MISIS <- function(df, conc)
 {
   temp <- data.frame(matrix(NA, ncol=length(conc$drug), nrow=max(conc$n_dilutions)))
@@ -435,11 +440,11 @@ AddConcentrations_MISIS <- function(df, conc)
   for(i in 1:(max(conc$n_dilutions)-1)) temp[i+1, ] <- temp[i, ]/conc$step_dilution
   
   df$C_mkM <- NA
-  for (i in 1:length(unique(df[4])))
+  for (i in 1:length(unique(df[5])))
   {
-    drug <- unique(df[4])[i]
+    drug <- unique(df[5])[[1]][i]
     drug_conc <- temp[colnames(temp) == drug][[1]]
-    df$C_mkM[df[4]==drug] <- rep(drug_conc, conc$n_replicates[i])
+    df$C_mkM[df[5]==drug] <- rep(drug_conc, conc$n_replicates[i])
   }
   
   # Convert concentrations to numbers

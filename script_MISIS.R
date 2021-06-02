@@ -8,7 +8,7 @@ export <- "C:/Users/User/Documents/Work/Data/MTS/09.04.21_MTS/MCF7"
 # Function callings
 data <- ImportDataFile_MISIS(path_data=path_data)
 data <- SubstractBackground_MISIS(data, 490, 700)
-data <- DropBlank_MISIS(data)
+data <- DropBlank_MISIS_2(data)
 drug_names <- unique(data$Образец)
 drug_names
 conc_info_HEK <- list(drug=drug_names,
@@ -26,11 +26,11 @@ conc_info_HEK_2 <- list(drug=drug_names,
                       n_replicates=c(3, 3, 2, 2, 3))
 
 conc_info_MCF7_09.04 <- list(drug=drug_names,
-                             stock_conc=rep(20, 10),
-                             first_dilution=rep(200, 10),
-                             step_dilution=rep(2, 10),
-                             n_dilutions=rep(8, 10),
-                             n_replicates=rep(3, 10))
+                             stock_conc=rep(20, 11),
+                             first_dilution=rep(200, 11),
+                             step_dilution=rep(2, 11),
+                             n_dilutions=rep(8, 11),
+                             n_replicates=rep(2, 11))
 
 
 data <- AddConcentrations_MISIS(data, conc_info_MCF7_09.04)

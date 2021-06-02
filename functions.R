@@ -3,6 +3,7 @@ library(readxl)
 library(drc)
 library(outliers)
 library(writexl)
+library(plyr)
 
 # Import .xls file with D555 data
 ImportDataFile <- function(path_data)
@@ -409,16 +410,17 @@ ImportDataFile_MISIS <- function(path_data)
 {
   df <- read_excel(path_data)
   colnames(df) <- df[2,]
-  df <- df[-c(1, 2), 1:8]
-  df$Образец <- sapply(df$Образец, split_string)
-  df$Погл. <- sapply(df$Погл., convert_to_numeric)
+  df <- df[-c(1, 2), ]
+  df <- df[, 1:8]
+  df[5] <- sapply(df[5], split_string)
+  df[7] <- sapply(df[7], convert_to_numeric)
   return(df)
 }
 
 SubstractBackground_MISIS <- function(df, wlength=490, backwlength=700)
 {
-  temp <- df[df$`Длина волны`==wlength,]
-  temp$Погл. <- df$Погл.[df$`Длина волны`==wlength]-df$Погл.[df$`Длина волны`==backwlength]
+  temp <- df[df[6]==wlength,]
+  temp[7] <- subset(df[7], df[6]==wlength)-subset(df[7], df[6]==backwlength)
   return(temp)
 }
 
@@ -433,11 +435,11 @@ AddConcentrations_MISIS <- function(df, conc)
   for(i in 1:(max(conc$n_dilutions)-1)) temp[i+1, ] <- temp[i, ]/conc$step_dilution
   
   df$C_mkM <- NA
-  for (i in 1:length(unique(df$Образец)))
+  for (i in 1:length(unique(df[4])))
   {
-    drug <- unique(df$Образец)[i]
+    drug <- unique(df[4])[i]
     drug_conc <- temp[colnames(temp) == drug][[1]]
-    df$C_mkM[df$Образец==drug] <- rep(drug_conc, conc$n_replicates[i])
+    df$C_mkM[df[4]==drug] <- rep(drug_conc, conc$n_replicates[i])
   }
   
   # Convert concentrations to numbers
@@ -449,7 +451,7 @@ AddConcentrations_MISIS <- function(df, conc)
 # Subset rows with particular drug name
 Subset_MISIS <- function(df, name)
 {
-  drug <- subset(df, df$Образец==name)
+  drug <- subset(df, df[4]==name)
   drug <- drug[, c(9, 7, 5)]
   colnames(drug) <- c("C_mkM", "D555", "Drug")
   drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]

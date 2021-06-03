@@ -431,6 +431,12 @@ SubstractBackground_MISIS <- function(df, wlength=490, backwlength=700)
   return(temp)
 }
 
+SubstractBackground_2files_MISIS <- function(df1, df2)
+{
+  df1[7] <- df1[7]-df2[7]
+  return(df1)
+}
+
 DrugList_MISIS <- function(df) return(as.vector(unlist(unique(df[5]))))
 
 AddConcentrations_MISIS <- function(df, conc)
@@ -463,6 +469,7 @@ Subset_MISIS <- function(df, name)
   drug <- drug[, c(9, 7, 5)]
   colnames(drug) <- c("C_mkM", "D555", "Drug")
   drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
+  drug <- as.data.frame(drug)
   return(drug)
 }
 
@@ -664,7 +671,7 @@ CC50_slope_bunch_MISIS <- function(df, controls, conc,
       temp <- CC50_slope_MISIS(df=df, name=boundaries$name[i],
                                controls=controls, conc=conc,
                                from=boundaries$from[i], to=boundaries$to[i],
-                               response=boundaries$response[i])
+                               response=boundaries$response[i], normalized=normalized)
       results <- rbind(results, temp)
     }
     

@@ -322,6 +322,7 @@ DRC_bunch <- function(df, drug_names, controls,
     drug <- RmOutliers(drug)
     statistics <- DRC(df=drug, normilized=normilized,
                       start_dose=start_dose, step_dose=step_dose,
+                      path_export=path_export,
                       X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
     GKs <- rbind(GKs, statistics)
     if(export==TRUE)

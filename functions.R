@@ -103,14 +103,14 @@ FindPlateuForControl <- function(df, alpha=0.05)
   notPlateu <- data.frame(matrix(ncol = ncol(df), nrow = 0))
   colnames(notPlateu) <- colnames(df)
   
-  lm <- lm(df$D555 ~ df$C_mkM)
+  lm <- lm(df$D555 ~ unlist(df$C_mkM))
   p_val <- summary(lm)$coefficients[2,4]
   
   while (p_val < alpha)
   {
     notPlateu <- rbind(notPlateu, df[(1:3), ])
     df <- df[-(1:3), ]
-    lm <- lm(df$D555 ~ df$C_mkM)
+    lm <- lm(df$D555 ~ unlist(df$C_mkM))
     p_val <- summary(lm)$coefficients[2,4]
   }
   
@@ -120,10 +120,9 @@ FindPlateuForControl <- function(df, alpha=0.05)
 # Plot subset
 Plot <- function(df, x=df$C_mkM, y=df$D555, log=TRUE)
 {
-  if(log==TRUE)
-  {
-    x=log10(x)
-  }
+  x = unlist(x)
+  if(log==TRUE) x=log(x, base=10)
+  
   plot(x=x,
        y=y,
        xlab='Log10[C], mkM', ylab='D555', main=df[1, 3])

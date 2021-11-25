@@ -340,26 +340,30 @@ DRC_bunch <- function(df, drug_names, controls,
 
 # Fit linear model and find CC50, SE, CIs for one drug
 # name, from, to are str and int
-CC50_slope <- function(df, name, controls, normalized=TRUE,
-                       from, to, response=c(50))
+CC50_slope <- function(df, name, path_to_table, controls, normalized=TRUE,
+                       response=c(50))
 {
+  boundaries <- read_excel(path_to_table)
   drug <- Subset(df, name)
   if(normalized==TRUE)
   {
     drug <- Normalization(drug, controls=controls)
   }
   
+  from <- boundaries[boundaries$Drug==name, ][[2]]
+  to <- boundaries[boundaries$Drug==name, ][[3]]
+  
   drug <- RmOutliers(drug)
   drug <- drug[from:to, ]
   
   if(normalized==TRUE)
   {
-    model <- lm(C_mkM ~ D555_N, data=drug)
+    model <- lm(unlist(C_mkM) ~ D555_N, data=drug)
   }
   
   if(normalized==FALSE)
   {
-    model <- lm(C_mkM ~ D555, data=drug)
+    model <- lm(unlist(C_mkM) ~ D555, data=drug)
   }
   
   

@@ -78,7 +78,7 @@ AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
     }
   }
   
-  df$C_mkM <- lapply(df$C_mkM, as.double)
+  df$C_mkM <- lapply(df$C_mkM, as.numeric)
   return(df) 
 }
 
@@ -93,7 +93,7 @@ Subset <- function(df, name)
 {
   drug <- subset(df, df$Drug == name)
   drug <- drug[, c(6, 9, 8)]
-  drug <- drug[order(drug$C_mkM, decreasing = TRUE), ]
+  drug <- drug[order(unlist(drug$C_mkM), decreasing = TRUE), ]
   return(drug)
 }
 

@@ -340,18 +340,18 @@ DRC_bunch <- function(df, drug_names, controls,
 
 # Fit linear model and find CC50, SE, CIs for one drug
 # name, from, to are str and int
-CC50_slope <- function(df, name, path_to_table, controls, normalized=TRUE,
+CC50_slope <- function(df, name, from, to, controls, normalized=TRUE,
                        response=c(50))
 {
-  boundaries <- read_excel(path_to_table)
+  #boundaries <- read_excel(path_to_table)
+  #from <- boundaries[boundaries$Drug==name, ][[2]]
+  #to <- boundaries[boundaries$Drug==name, ][[3]]
+  
   drug <- Subset(df, name)
   if(normalized==TRUE)
   {
     drug <- Normalization(drug, controls=controls)
   }
-  
-  from <- boundaries[boundaries$Drug==name, ][[2]]
-  to <- boundaries[boundaries$Drug==name, ][[3]]
   
   drug <- RmOutliers(drug)
   drug <- drug[from:to, ]
@@ -381,27 +381,32 @@ CC50_slope <- function(df, name, path_to_table, controls, normalized=TRUE,
 
 # Fit linear model and find CC50, SE, CIs for several drugs
 # drug_names, from, to are vectors
-CC50_slope_bunch <- function(df, controls,
-                             boundaries, normalized=TRUE,
-                             exclude=c())
+CC50_slope_bunch <- function(df, path_to_table, controls,
+                             normalized=TRUE, merge=FALSE, merge_with=curves)
 {
+  # Create new dataframe
   results <- data.frame(matrix(NA, ncol=5, nrow=0))
   colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
   
-  n_drugs <- length(boundaries$name) - length(exclude)
+  # Download a table
+  boundaries <- read_excel(path_to_table)
+  
+  # Number of drugs
+  n_drugs <- nrow(boundaries)
   for (i in 1:n_drugs)
   {
-    #print(c(i, boundaries$name[i], boundaries$from[i], boundaries$to[i]))
-    if(!is.element(boundaries$name[i], exclude))
-    {
-      temp <- CC50_slope(df=df, name=boundaries$name[i],
+    drug_name <- boundaries$Drug[i]
+    temp <- CC50_slope(df=df, name=drug_name,
                          controls=controls,
-                         from=boundaries$from[i], to=boundaries$to[i],
-                         response=boundaries$response[i])
-      results <- rbind(results, temp)
-      }
+                         from=boundaries[boundaries$Drug==drug_name, ][[2]],
+                         to=boundaries[boundaries$Drug==drug_name, ][[3]],
+                         response=boundaries[boundaries$Drug==drug_name, ][[4]])
+    results <- rbind(results, temp)
     
   }
+  
+  if (merge==TRUE) return(merge(merge_with, results, by="Drug", all = T))
+  
   return(results)
 }
 

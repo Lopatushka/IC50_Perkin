@@ -233,7 +233,7 @@ DRC <- function(df, normilized=TRUE,
   
   colnames(df) <- c("C_mkM", "D555")
   
-  model <- try_model_fun(code=(drm(D555 ~ C_mkM,
+  model <- try_model_fun(code=(drm(D555 ~ unlist(C_mkM),
                data = df,
                fct = LL.4(names=c("Slope", "Lower Limit", "Upper Limit", "ED50")))))
   #Logic variable: TRUE - converge error, FALSE - normals

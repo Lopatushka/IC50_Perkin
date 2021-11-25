@@ -4,7 +4,6 @@ cell_line_names <- "HEK293"
 
 # Download functions
 source("functions.R")
-todor::todor()
 
 # Paths to files
 working_dir <- getwd()
@@ -18,8 +17,22 @@ path_conc <- list.files(path = name_of_dir, ignore.case=TRUE,
 # TODO Create a dir
 path_export <- paste(name_of_dir, "results", sep="/")
 
-# Download row data
+# Download and process row data from one cell line
 data <- ImportDataFile(path_data)
 data <- AddDrugNames(data, path_names)
 data <- AddConcentrations(df = data, path_conc = path_conc)
 data <- DropNull(data)
+
+# List of all drugs in experiment
+drug_names <- unique(data$Drug)
+
+# Subset and plot control (DMSO)
+sb <- Subset(df = data, name = "DMSO")
+Plot(df = sb)
+
+# Find control medians and replace outliers
+control_medians <- RmOutliersFromControl(sb)
+
+
+
+todor::todor()

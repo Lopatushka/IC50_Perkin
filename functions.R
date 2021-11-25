@@ -294,6 +294,7 @@ DRC_bunch <- function(df, drug_names, controls,
                       path_export=".", export=TRUE,
                       plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
 {
+  print("Waiting...")
   # Create an empty data frame for bind resuls
   if(need_CCX==TRUE)
   {
@@ -333,6 +334,7 @@ DRC_bunch <- function(df, drug_names, controls,
       write_xlsx(drug, path)
     }
   }
+  print("Done!")
   return(GKs)
 }
 

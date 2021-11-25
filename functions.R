@@ -47,36 +47,39 @@ AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
 AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
                               n_dilutions=8,  n_replicates=3)
 {
-  concentrations <- read_excel(path_conc)
-  temp <- data.frame(matrix(NA, ncol=ncol(concentrations), nrow=n_dilutions))
-  rownames(temp) <- paste("C_mkM", 1:n_dilutions,  sep="_")
-  colnames(temp) <- colnames(concentrations)
-  concentrations <- as.data.frame(rbind(concentrations, temp))
-  rownames(concentrations)[1] <- 'C_stock_mM'
-  
-  concentrations[2,] <- 1000*as.numeric(concentrations[1, ])/first_dilution
-  for (row in 3:nrow(concentrations))
-  {
-    concentrations[row,] <- concentrations[row-1, ]/step_dilution
-  }
-  
-  # Add null to Drug null
+  # Create new col in dataframe and add null to Drug null
   df$C_mkM <- NA
   df$C_mkM[df$Drug == 'null'] <- 'null'
   
-  for (i in 1:length(unique(df$Drug)))
+  # Make a list of drugs
+  list_of_drugs <- unique(df$Drug)
+  
+  # Read concentration file
+  concentrations <- read_excel(path_conc)
+  
+  # Big for cycle
+  for (drug in list_of_drugs)
   {
-    drug <- unique(df$Drug)[i]
     if (drug!='null')
     {
-      conc <- concentrations[colnames(concentrations) == drug][[1]][-1]
-      df$C_mkM[df$Drug==drug] <- rep(conc, n_replicates)
+      print(drug)
+      # Create a temp dataframe
+      temp <- data.frame(matrix(NA, ncol=1, nrow=n_dilutions))
+      rownames(temp) <- paste("C_mkM", 1:n_dilutions,  sep="_")
+      colnames(temp) <- drug
+      
+      # Fill the temp dataframe: First dilution, turn to mkM
+      temp[1,] <- 1000*concentrations[concentrations$Drug == drug, ][2] /first_dilution
+      # Other dilutions
+      for (row in 2:nrow(temp)) temp[row,] <- temp[row-1, ]/step_dilution
+      
+      # Fill C_mkM col in df
+      df$C_mkM[df$Drug==drug] <- rep(temp[, 1], n_replicates)
     }
   }
   
-  
-  df$C_mkM <- sapply(df$C_mkM, as.double)
-  return(df)
+  df$C_mkM <- lapply(df$C_mkM, as.double)
+  return(df) 
 }
 
 # Drop rows with null drug name

@@ -44,7 +44,7 @@ AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
 }
 
 # Add Concentration col to dataframe
-AddConcentrations <- function(df, first_dilution=200,step_dilution=3,
+AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
                               n_dilutions=8,  n_replicates=3)
 {
   concentrations <- read_excel(path_conc)

@@ -35,18 +35,20 @@ Plot(df = sb)
 control_medians <- RmOutliersFromControl(sb)
 control_medians
 
-# Fit curve: bunch processing
+# Fit curves: bunch processing
 curves <- DRC_bunch(df=data, drug_names=drug_names,
                     controls=control_medians,
                     normilized=TRUE, start_dose=100,
                     step_dose=0.02, X=50, plot=TRUE, save_plot=TRUE,
                     path_export=path_export, export=TRUE, need_CCX=TRUE)
 
-drugs_of_interest <- c("TT19", "TT20")
+drugs_of_interest <- c("TT19", "TT20", "TT21", "TT29", "TT30", "TT31",
+                       "TT35", "TT36", "TT37", "TT41", "TT42", "TT43")
+length(drugs_of_interest)
 
 # CC50_linear_regression for 1 drug
-CC50_slope(df=data, from=1, to=6, name="TT19",
-           controls=control_medians, normalized=TRUE,response=c(50))
+#CC50_slope(df=data, from=1, to=6, name="TT19",
+#           controls=control_medians, normalized=TRUE,response=c(50))
 
 # CC50_lm for several drugs + merge to final table
 curves <- CC50_slope_bunch(df=data, controls=control_medians,

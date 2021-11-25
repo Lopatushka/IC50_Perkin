@@ -13,6 +13,7 @@ path_names <- list.files(path = name_of_dir, ignore.case=TRUE,
                          full.names = TRUE,pattern = "names")
 path_conc <- list.files(path = name_of_dir, ignore.case=TRUE,
                         full.names = TRUE,pattern = "concentrations")
+path_CC50_lm <- paste(name_of_dir, "CC50_iter.xlsx", sep='/')
 
 # TODO Create a dir
 path_export <- paste(name_of_dir, "results", sep="/")
@@ -32,7 +33,23 @@ Plot(df = sb)
 
 # Find control medians and replace outliers
 control_medians <- RmOutliersFromControl(sb)
+control_medians
 
+# Fit curve: bunch processing
+curves <- DRC_bunch(df=data, drug_names=drug_names,
+                    controls=control_medians,
+                    normilized=TRUE, start_dose=100,
+                    step_dose=0.02, X=50, plot=TRUE, save_plot=TRUE,
+                    path_export=path_export, export=TRUE, need_CCX=TRUE)
 
+drugs_of_interest <- c("TT19", "TT20")
 
-todor::todor()
+# CC50_linear_regression for 1 drug
+CC50_slope(df=data, from=1, to=6, name="TT19",
+           controls=control_medians, normalized=TRUE,response=c(50))
+
+# CC50_lm for several drugs + merge to final table
+curves <- CC50_slope_bunch(df=data, controls=control_medians,
+                          path_to_table=path_CC50_lm,
+                          merge=TRUE, merge_with=curves)
+

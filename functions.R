@@ -343,10 +343,6 @@ DRC_bunch <- function(df, drug_names, controls,
 CC50_slope <- function(df, name, from, to, controls, normalized=TRUE,
                        response=c(50))
 {
-  #boundaries <- read_excel(path_to_table)
-  #from <- boundaries[boundaries$Drug==name, ][[2]]
-  #to <- boundaries[boundaries$Drug==name, ][[3]]
-  
   drug <- Subset(df, name)
   if(normalized==TRUE)
   {
@@ -355,6 +351,7 @@ CC50_slope <- function(df, name, from, to, controls, normalized=TRUE,
   
   drug <- RmOutliers(drug)
   drug <- drug[from:to, ]
+  
   
   if(normalized==TRUE)
   {

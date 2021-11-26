@@ -1,6 +1,6 @@
 # Enter data
 name_of_dir <- "01.04.19_MTT_Perkin_data"
-cell_line_names <- "HepG2"
+cell_line_names <- "Huh7"
 
 # Download functions
 source("functions.R")
@@ -28,6 +28,7 @@ data <- DropNull(data)
 
 # List of all drugs in experiment
 drug_names <- unique(data$Drug)
+drug_names
 
 # Subset and plot control (DMSO)
 sb <- Subset(df = data, name = "DMSO")
@@ -57,4 +58,5 @@ CC50s <- CC50_slope_bunch(df=data, controls=control_medians,
                           path_to_table=path_CC50_lm,
                           merge=TRUE, merge_with=curves)
 
-write_xlsx(CC50s, paste(name_of_dir, "results_merged.xlsx", sep='/'))
+write_xlsx(CC50s, paste(name_of_dir,
+                        paste(cell_line_names, "results_merged.xlsx"), sep='/'))

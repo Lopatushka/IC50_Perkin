@@ -1,6 +1,6 @@
 # Enter data
 name_of_dir <- "01.04.19_MTT_Perkin_data"
-cell_line_names <- "HEK293"
+cell_line_names <- "HepG2"
 
 # Download functions
 source("functions.R")
@@ -13,10 +13,12 @@ path_names <- list.files(path = name_of_dir, ignore.case=TRUE,
                          full.names = TRUE,pattern = "names")
 path_conc <- list.files(path = name_of_dir, ignore.case=TRUE,
                         full.names = TRUE,pattern = "concentrations")
-path_CC50_lm <- paste(name_of_dir, "CC50_iter.xlsx", sep='/')
+path_CC50_lm <- paste(name_of_dir,
+                      paste(paste("CC50", cell_line_names, sep="_"), "xlsx", sep="."),
+                      sep='/')
 
 # TODO Create a dir
-path_export <- paste(name_of_dir, "results", sep="/")
+path_export <- paste(name_of_dir, paste(cell_line_names, "results", sep="_"), sep="/")
 
 # Download and process row data from one cell line
 data <- ImportDataFile(path_data)
@@ -47,11 +49,12 @@ drugs_of_interest <- c("TT19", "TT20", "TT21", "TT29", "TT30", "TT31",
 length(drugs_of_interest)
 
 # CC50_linear_regression for 1 drug
-#CC50_slope(df=data, from=1, to=6, name="TT19",
+#CC50_slope(df=data, from=1, to=6, name="TT35",
 #           controls=control_medians, normalized=TRUE,response=c(50))
 
 # CC50_lm for several drugs + merge to final table
-curves <- CC50_slope_bunch(df=data, controls=control_medians,
+CC50s <- CC50_slope_bunch(df=data, controls=control_medians,
                           path_to_table=path_CC50_lm,
                           merge=TRUE, merge_with=curves)
 
+write_xlsx(CC50s, paste(name_of_dir, "results_merged.xlsx", sep='/'))

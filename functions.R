@@ -5,6 +5,7 @@ library(outliers)
 library(writexl)
 library(purrr)
 library(dplyr)
+library(writexl)
 
 # Import .xls file with D555 data
 ImportDataFile <- function(path_data)
@@ -47,39 +48,49 @@ AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
 AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
                               n_dilutions=8,  n_replicates=3)
 {
-  # Create new col in dataframe and add null to Drug null
-  df$C_mkM <- NA
-  df$C_mkM[df$Drug == 'null'] <- 'null'
-  
-  # Make a list of drugs
-  list_of_drugs <- unique(df$Drug)
-  
-  # Read concentration file
-  concentrations <- read_excel(path_conc)
-  
-  # Big for cycle
-  for (drug in list_of_drugs)
-  {
-    if (drug!='null')
-    {
-      #print(drug)
-      # Create a temp dataframe
-      temp <- data.frame(matrix(NA, ncol=1, nrow=n_dilutions))
-      rownames(temp) <- paste("C_mkM", 1:n_dilutions,  sep="_")
-      colnames(temp) <- drug
+  out <- tryCatch(
+    expr = {
+      # Create new col in dataframe and add null to Drug null
+      df$C_mkM <- NA
+      df$C_mkM[df$Drug == 'null'] <- 'null'
       
-      # Fill the temp dataframe: First dilution, turn to mkM
-      temp[1,] <- 1000*concentrations[concentrations$Drug == drug, ][2] /first_dilution
-      # Other dilutions
-      for (row in 2:nrow(temp)) temp[row,] <- temp[row-1, ]/step_dilution
+      # Make a list of drugs
+      list_of_drugs <- unique(df$Drug)
       
-      # Fill C_mkM col in df
-      df$C_mkM[df$Drug==drug] <- rep(temp[, 1], n_replicates)
+      # Read concentration file
+      concentrations <- read_excel(path_conc)
+      
+      # Big for cycle
+      for (drug in list_of_drugs)
+      {
+        if (drug!='null')
+        {
+          #print(drug)
+          # Create a temp dataframe
+          temp <- data.frame(matrix(NA, ncol=1, nrow=n_dilutions))
+          rownames(temp) <- paste("C_mkM", 1:n_dilutions,  sep="_")
+          colnames(temp) <- drug
+          
+          # Fill the temp dataframe: First dilution, turn to mkM
+          temp[1,] <- 1000*concentrations[concentrations$Drug == drug, ][2] /first_dilution
+          # Other dilutions
+          for (row in 2:nrow(temp)) temp[row,] <- temp[row-1, ]/step_dilution
+          
+          # Fill C_mkM col in df
+          df$C_mkM[df$Drug==drug] <- rep(temp[, 1], n_replicates)
+        }
+      }
+      
+      df$C_mkM <- lapply(df$C_mkM, as.numeric)
+      return(df)
+    },
+    error = function(e){
+      message(paste("There is no drug in the concentration file:", drug))
+      message(paste('The original message from R is below:'))
+      message(e)
     }
-  }
-  
-  df$C_mkM <- lapply(df$C_mkM, as.numeric)
-  return(df) 
+  )
+  return(out)
 }
 
 # Drop rows with null drug name

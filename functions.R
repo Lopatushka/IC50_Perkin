@@ -62,7 +62,7 @@ AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
   {
     if (drug!='null')
     {
-      print(drug)
+      #print(drug)
       # Create a temp dataframe
       temp <- data.frame(matrix(NA, ncol=1, nrow=n_dilutions))
       rownames(temp) <- paste("C_mkM", 1:n_dilutions,  sep="_")
@@ -91,10 +91,19 @@ DropNull <- function(df)
 # Subset rows with particular drug name
 Subset <- function(df, name)
 {
-  drug <- subset(df, df$Drug == name)
-  drug <- drug[, c(6, 9, 8)]
-  drug <- drug[order(unlist(drug$C_mkM), decreasing = TRUE), ]
-  return(drug)
+  out <- tryCatch(
+    expr = {
+      drug <- subset(df, df$Drug == name)
+      drug <- drug[, c(6, 9, 8)]
+      drug <- drug[order(unlist(drug$C_mkM), decreasing = TRUE), ]
+    },
+    error = function(e){
+      message(paste("There is no drug in the data:", name))
+      message(paste('The original message from R is below:'))
+      message(e)
+    }
+  )
+  return(out)
 }
 
 # Find plateau in control (DMSO) subset using linear regression
@@ -393,6 +402,7 @@ CC50_slope_bunch <- function(df, path_to_table, controls,
   for (i in 1:n_drugs)
   {
     drug_name <- boundaries$Drug[i]
+    print(drug_name)
     temp <- CC50_slope(df=df, name=drug_name,
                          controls=controls,
                          from=boundaries[boundaries$Drug==drug_name, ][[2]],

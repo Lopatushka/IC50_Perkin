@@ -60,3 +60,8 @@ CC50s <- CC50_slope_bunch(df=data, controls=control_medians,
 
 write_xlsx(CC50s, paste(name_of_dir,
                         paste(cell_line_names, "results_merged.xlsx"), sep='/'))
+
+# Merge final tables into a single one and export to .xlsx file
+combined <- MergeFilesFun(path="C:/Users/User/Google Диск/R_scipts/IC50_Perkin/01.04.19_MTT_Perkin_data/final_data",
+                          split_by=" ")
+Export_xlsx(df=combined, path="C:/Users/User/Google Диск/R_scipts/IC50_Perkin/01.04.19_MTT_Perkin_data/final_data")

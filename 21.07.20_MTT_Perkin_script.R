@@ -1,6 +1,6 @@
 # Enter data
 name_of_dir <- "21.07.20_MTT_Perkin_data"
-cell_line_names <- "PC3"
+cell_line_names <- "Huh7"
 setwd("C:/Users/User/Google Диск/R_scipts/IC50_Perkin/row_data")
 
 # Download functions
@@ -59,7 +59,8 @@ Export_xlsx(CC50s, paste(name_of_dir,
                         paste(cell_line_names, "results_merged.xlsx"), sep='/'))
 
 # Merge final tables into a single one and export to .xlsx file
-#combined <- MergeFilesFun(path=paste(cell_line_names, "results_merged.xlsx"), sep='/'),
-#                          split_by=" ")
+combined <- MergeFilesFun(path=paste(name_of_dir, "final_tables", sep='/'),
+                          split_by=" ")
 
-#Export_xlsx(df=combined, path="C:/Users/User/Google Диск/R_scipts/IC50_Perkin/01.04.19_MTT_Perkin_data/final_data")
+Export_xlsx(df=combined, path=paste(name_of_dir, "final_tables", "results_combined.xlsx",
+                                    sep='/'))

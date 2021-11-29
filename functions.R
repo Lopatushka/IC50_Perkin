@@ -17,6 +17,12 @@ ImportDataFile <- function(path_data)
   return(df)
 }
 
+# Export .xlsx files
+Export_xlsx <- function(df, path="./results.xlsx", append = FALSE)
+{
+  write_xlsx(df, path, append=append)
+}
+
 # Combine 2 dataframe with row data into single one
 CombineTwoDataFiles <- function(df1, df2)
 {
@@ -315,7 +321,7 @@ DRC_bunch <- function(df, drug_names, controls,
                       path_export=".", export=TRUE,
                       plot=TRUE, save_plot=TRUE, need_CCX=TRUE)
 {
-  print("Waiting...")
+  message("Waiting...")
   # Create an empty data frame for bind resuls
   if(need_CCX==TRUE)
   {
@@ -355,7 +361,7 @@ DRC_bunch <- function(df, drug_names, controls,
       write_xlsx(drug, path)
     }
   }
-  print("Done!")
+  message("Done!")
   return(GKs)
 }
 
@@ -475,7 +481,7 @@ MergeFilesFun <- function(path, split_by=" ", files_type=".xlsx")
   return(combined_data)
 }
 
-# MISIS
+### MISIS
 DropBlank_MISIS_2 <- function(df) 
 {
   df_drop <- df[df[4]!="Бланк",]

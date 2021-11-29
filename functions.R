@@ -18,9 +18,9 @@ ImportDataFile <- function(path_data)
 }
 
 # Export .xlsx files
-Export_xlsx <- function(df, path="./results.xlsx", append = FALSE)
+Export_xlsx <- function(df, path="./results.xlsx")
 {
-  write_xlsx(df, path, append=append)
+  write_xlsx(df, path)
 }
 
 # Combine 2 dataframe with row data into single one

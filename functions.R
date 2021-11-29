@@ -445,8 +445,8 @@ try_model_fun <- function(code)
 MergeFilesFun <- function(path, split_by=" ", files_type=".xlsx")
 {
   # List of files
-  paths_files <- list.files(getwd(), full.names = TRUE,  pattern = files_type)
-  list_of_files <- list.files(getwd(), full.names = FALSE, pattern = files_type)
+  paths_files <- list.files(path, full.names = TRUE,  pattern = files_type)
+  list_of_files <- list.files(path, full.names = FALSE, pattern = files_type)
   n_files <- length(list_of_files)
   vector_names <- c()
   for (name in list_of_files)
@@ -455,7 +455,7 @@ MergeFilesFun <- function(path, split_by=" ", files_type=".xlsx")
   }
   
   temp <- list()
-  for (file in list_of_files)
+  for (file in paths_files)
   {
     df <- read_xlsx(file)
     df <- df[c(1, 7, 11, 19, 20:24)]

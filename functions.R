@@ -6,6 +6,7 @@ library(writexl)
 library(purrr)
 library(dplyr)
 library(writexl)
+library (berryFunctions)
 
 # Import .xls file with D555 data
 ImportDataFile <- function(path_data)
@@ -433,6 +434,45 @@ try_model_fun <- function(code)
   temp <- try(code, silent = TRUE)
   if (class(temp)=="try-error") temp <- NA
   return(temp)
+}
+
+MergeFilesFun <- function(path, split_by=" ", files_type=".xlsx")
+{
+  # List of files
+  paths_files <- list.files(getwd(), full.names = TRUE,  pattern = files_type)
+  list_of_files <- list.files(getwd(), full.names = FALSE, pattern = files_type)
+  n_files <- length(list_of_files)
+  vector_names <- c()
+  for (name in list_of_files)
+  {
+    vector_names <- c(vector_names, strsplit(name, split_by)[[1]][1])
+  }
+  
+  temp <- list()
+  for (file in list_of_files)
+  {
+    df <- read_xlsx(file)
+    df <- df[c(1, 7, 11, 19, 20:24)]
+    df <- df[!is.na(df$CC50.y),]
+    df$CC50.x[df$CC50.x==100] <- ">100"
+    temp <- append(temp, df)
+  }
+  # Combine files into a single dataframe
+  combined_data <- as.data.frame(do.call(cbind, temp))
+  # Add emptu row above
+  combined_data <- insertRows(combined_data, 1 , new = NA)
+  # Add cell line names
+  j <- 1
+  for (i in 1:(n_files*9))
+  {
+    if(i%%9==1) 
+    {
+      combined_data[1, i] <- vector_names[j]
+      j <- j + 1
+    }
+  }
+  
+  return(combined_data)
 }
 
 # MISIS

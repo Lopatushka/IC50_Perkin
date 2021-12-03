@@ -22,5 +22,11 @@ data <- ImportDataFile_MISIS(path_data)
 data <- SubstractBackground_MISIS(df=data, wlength=490, backwlength=700)
 data <- AddDrugNamesManual_MISIS(df=data, path_names=path_names, n_replicates=1)
 data <- AddConcentrations_MISIS(df=data, path_conc=path_conc)
+data <- DropNull(df=data)
 
-drug <- "L186"
+# List of all drugs in experiment
+drug_names <- unique(data$Drug)
+drug_names
+
+# Subset and plot control (DMSO)
+

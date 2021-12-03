@@ -101,6 +101,47 @@ AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
   return(out)
 }
 
+AddConcentrations_MISIS <- function(df, path_conc)
+{
+  #Create new col in dataframe and add null to Drug null
+  df$C_mkM <- NA
+  df$C_mkM[df$Drug == 'null'] <- 'null'
+  
+  # Make a list of drugs
+  list_of_drugs <- unique(df$Drug)
+  
+  # Read concentration file
+  concentrations <- read_excel(path_conc)
+  
+  for (drug in list_of_drugs)
+  {
+    if (drug!='null')
+    {
+      # Create a temp dataframe
+      n_dilutions <- concentrations$N_dilution[concentrations$Drug==drug]
+      temp <- data.frame(matrix(NA, ncol=1, nrow=n_dilutions))
+      rownames(temp) <- paste("C_mkM", 1:n_dilutions,  sep="_")
+      colnames(temp) <- drug
+      
+      # Fill the temp dataframe: First dilution, turn to mkM
+      first_dilution <- concentrations$First_dilution[concentrations$Drug==drug]
+      step_dilution <-  concentrations$Step_dilution[concentrations$Drug==drug]
+      n_replicates <- concentrations$N_replicates[concentrations$Drug==drug]
+      
+      temp[1,] <- 1000*concentrations[concentrations$Drug == drug, ][2] /first_dilution
+      # Other dilutions
+      for (row in 2:nrow(temp)) temp[row,] <- temp[row-1, ]/step_dilution
+      
+      # Fill C_mkM col in df
+      df$C_mkM[df$Drug==drug] <- rep(temp[, 1], n_replicates)
+    }
+  }
+  
+  #df$C_mkM <- lapply(df$C_mkM, as.numeric)
+  df$C_mkM <- sapply(df$C_mkM, as.double)
+  return(df)
+}
+
 # Drop rows with null drug name
 DropNull <- function(df)
 {
@@ -534,28 +575,7 @@ SubstractBackground_2files_MISIS <- function(df1, df2)
 
 DrugList_MISIS <- function(df) return(as.vector(unlist(unique(df[5]))))
 
-AddConcentrations_MISIS <- function(df, conc)
-{
-  temp <- data.frame(matrix(NA, ncol=length(conc$drug), nrow=max(conc$n_dilutions)))
-  rownames(temp) <- paste("C_mkM", 1:max(conc$n_dilutions),  sep="_")
-  colnames(temp) <- conc$drug
-  temp[1, ] <- 1000*conc$stock_conc/conc$first_dilution
-  for(i in 1:(max(conc$n_dilutions)-1)) temp[i+1, ] <- temp[i, ]/conc$step_dilution
-  
-  df$C_mkM <- NA
-  drug_list <- DrugList_MISIS(df)
-  for (i in 1:length(drug_list))
-  {
-    drug <- drug_list[i]
-    drug_conc <- temp[colnames(temp) == drug][[1]]
-    df$C_mkM[df[5]==drug] <- rep(drug_conc, conc$n_replicates[i])
-  }
-  
-  # Convert concentrations to numbers
-  df$C_mkM <- sapply(df$C_mkM, as.double)
-  
-  return(df)
-}
+
 
 # Subset rows with particular drug name
 Subset_MISIS <- function(df, name)

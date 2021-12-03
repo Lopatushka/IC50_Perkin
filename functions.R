@@ -51,6 +51,7 @@ AddDrugNames <- function(df, path_names, plate_type=96, n_replicates=3)
   return(df)
 }
 
+
 # Add Concentration col to dataframe
 AddConcentrations <- function(df, path_conc, first_dilution=200,step_dilution=3,
                               n_dilutions=8,  n_replicates=3)
@@ -383,16 +384,16 @@ CC50_slope <- function(df, name, from, to, controls, normalized=TRUE,
   if(normalized==TRUE)
   {
     model <- lm(unlist(C_mkM) ~ D555_N, data=drug)
+    predition <- predict(model, data.frame(D555_N=response),
+                         se.fit=TRUE, interval = "confidence")
   }
   
   if(normalized==FALSE)
   {
     model <- lm(unlist(C_mkM) ~ D555, data=drug)
+    predition <- predict(model, data.frame(D555=response),
+                         se.fit=TRUE, interval = "confidence")
   }
-  
-  
-  predition <- predict(model, data.frame(D555_N=response),
-                       se.fit=TRUE, interval = "confidence")
   
   results <- data.frame(matrix(NA, ncol=5, nrow=1))
   colnames(results) <- c('Drug', 'CC50', 'Lower', 'Upper', 'SE')
@@ -486,6 +487,22 @@ DropBlank_MISIS_2 <- function(df)
 {
   df_drop <- df[df[4]!="Бланк",]
   return(df_drop)
+}
+
+AddDrugNamesManual_MISIS <- function(df, path_names, plate_type=96, n_replicates=3)
+{
+  names <- read_excel(path_names)
+  df$Block <- NA
+  block_names <- colnames(names)
+  df$Block <- rep(block_names, each=plate_type*n_replicates)
+  df$Drug <- NA
+  for (row in 1:dim(df)[1])
+  {
+    name_well <- as.numeric(substr(df$Лунка[row], start=2, stop=3))
+    name_block <- df$Block[row]
+    df$Drug[row] <- names[colnames(names)==name_block][[1]][name_well]
+  }
+  return(df)
 }
 
 split_string <- function(s) return(strsplit(s, "_")[[1]][1])

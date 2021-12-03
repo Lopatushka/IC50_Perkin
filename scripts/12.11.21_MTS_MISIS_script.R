@@ -21,5 +21,6 @@ path_conc <- list.files(path = name_of_dir, ignore.case=TRUE,
 data <- ImportDataFile_MISIS(path_data)
 data <- SubstractBackground_MISIS(df=data, wlength=490, backwlength=700)
 data <- AddDrugNamesManual_MISIS(df=data, path_names=path_names, n_replicates=1)
+data <- AddConcentrations_MISIS(df=data, path_conc=path_conc)
 
-data_c <- AddConcentrationsManual_MISIS(df=data)
+drug <- "L186"

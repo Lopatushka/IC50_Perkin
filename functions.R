@@ -841,7 +841,7 @@ DRC_bunch_MISIS <- function(df, drug_names, controls, conc,
 }
 
 # Fit curves for drugs in list drug_names
-DRC_bunch_MISIS_new <- function(df, drug_names, controls,
+DRC_bunch_MISIS_new <- function(df, drug_names, exclude=c(), controls,
                       normilized=TRUE, start_dose=100,
                       step_dose=0.02, X=50,
                       path_export=".", export=TRUE,manual_drugs_add=TRUE,
@@ -873,20 +873,24 @@ DRC_bunch_MISIS_new <- function(df, drug_names, controls,
   
   for (name in drug_names)
   {
-    if(manual_drugs_add==TRUE) drug <- SubsetManual_MISIS(df, name)
-    if(manual_drugs_add==FALSE)drug <- Subset_MISIS(df, name)
-    drug <- Normalization(drug, controls) # TODO check w/o normalization!
-    drug <- RmOutliers(drug)
-    statistics <- DRC_MISIS_new(df=drug, normilized=normilized,
-                      start_dose=start_dose, step_dose=step_dose,
-                      path_export=path_export,
-                      X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
-    GKs <- rbind(GKs, statistics)
-    if(export==TRUE)
+    if (!is.element(drug, exclude))
     {
-      path <- paste(path_export, '/', name,'.xlsx', sep="")
-      write_xlsx(drug, path)
+      if(manual_drugs_add==TRUE) drug <- SubsetManual_MISIS(df, name)
+      if(manual_drugs_add==FALSE)drug <- Subset_MISIS(df, name)
+      drug <- Normalization(drug, controls) # TODO check w/o normalization!
+      drug <- RmOutliers(drug)
+      statistics <- DRC_MISIS_new(df=drug, normilized=normilized,
+                                  start_dose=start_dose, step_dose=step_dose,
+                                  path_export=path_export,
+                                  X=X, plot=plot, save_plot=save_plot, need_CCX=need_CCX)
+      GKs <- rbind(GKs, statistics)
+      if(export==TRUE)
+      {
+        path <- paste(path_export, '/', name,'.xlsx', sep="")
+        write_xlsx(drug, path)
+      }
     }
+    
   }
   message("Done!")
   return(GKs)

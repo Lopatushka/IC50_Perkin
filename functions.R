@@ -873,7 +873,7 @@ DRC_bunch_MISIS_new <- function(df, drug_names, exclude=c(), controls,
   
   for (name in drug_names)
   {
-    if (!is.element(drug, exclude))
+    if (!is.element(name, exclude))
     {
       if(manual_drugs_add==TRUE) drug <- SubsetManual_MISIS(df, name)
       if(manual_drugs_add==FALSE)drug <- Subset_MISIS(df, name)

@@ -1,5 +1,5 @@
 # Enter data
-name_of_dir <- "13.12.21_MTS"
+name_of_dir <- "17.12.21_MTS_PC3"
 cell_line_names <- "PC3"
 setwd("C:/Users/User/Google Диск/R_scipts/IC50_Perkin")
 
@@ -7,18 +7,17 @@ setwd("C:/Users/User/Google Диск/R_scipts/IC50_Perkin")
 working_dir <- getwd()
 path_data <- list.files(path = name_of_dir, ignore.case=TRUE,
                         full.names = TRUE,pattern = cell_line_names,
-                        recursive=TRUE)[2]
+                        recursive=TRUE)
 path_names <- list.files(path = name_of_dir, ignore.case=TRUE,
-                         full.names = TRUE,pattern = "names", recursive=TRUE)[3]
+                         full.names = TRUE,pattern = "names", recursive=TRUE)
 
 path_conc <- list.files(path = name_of_dir, ignore.case=TRUE,
-                        full.names = TRUE,pattern = "concentrations", recursive=TRUE)[3]
+                        full.names = TRUE,pattern = "concentrations", recursive=TRUE)
 
-path_export <- paste(name_of_dir, paste("PC3", "results", sep="_"), sep="/")
-
-path_CC50_lm <- list.files(path = name_of_dir, ignore.case=TRUE,
-           full.names = TRUE,pattern = "CC50", recursive=TRUE)[3]
-
+path_export <- paste(name_of_dir, paste(cell_line_names, "results", sep="_"), sep="/")
+path_CC50_lm <- paste(name_of_dir,
+                      paste(paste("CC50", "HEK", sep="_"), "xlsx", sep="."),
+                      sep='/')
 
 # Download and process row data from one cell line
 data <- ImportDataFile_MISIS(path_data)
@@ -40,7 +39,7 @@ control_medians_drugs <- RmOutliersFromControl(sb_drugs)
 control_medians_drugs
 
 # Fit curves: bunch processing
-curves <- DRC_bunch_MISIS_new(df=data, drug_names=drug_names,exclude=c(),
+curves <- DRC_bunch_MISIS_new(df=data, drug_names=drug_names,
                               controls=control_medians_drugs,
                               normilized=TRUE, start_dose=100,
                               step_dose=0.02, X=50, plot=TRUE, save_plot=TRUE,
@@ -48,10 +47,6 @@ curves <- DRC_bunch_MISIS_new(df=data, drug_names=drug_names,exclude=c(),
                               need_CCX=TRUE,
                               manual_drugs_add=TRUE)
 
-CC50s <- CC50_slope_bunch_MISIS(df=data, controls=control_medians_drugs,
-                                path_to_table=path_CC50_lm,
-                                merge=TRUE, merge_with=curves)
-
-Export_xlsx(df=CC50s,
+Export_xlsx(df=curves,
             path=paste(paste(path_export, cell_line_names, sep="/"),
                        ".xlsx", sep=""))
